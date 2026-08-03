@@ -37,3 +37,54 @@ git commit -m "Add SDD spec and journal for Personal Brain project"
 ```
 Push commands will follow once a GitHub remote is set up (ask before
 creating the remote — first time doing so this session).
+
+---
+
+## 2026-08-03 22:30 — Repo pushed; Next.js scaffolded; gbrain reality check
+
+**Context:** User pushed the initial commit to
+https://github.com/Halok600/PROJECT_MAIN_AI (main branch). Started Phase 1
+step 1: scaffolded Next.js (App Router, TS, Tailwind, src dir) via
+`create-next-app`. `npm` rejected the project name because the directory
+name (`PROJECT_MAIN_AI`) has capital letters, so the app was scaffolded into
+a temp subfolder and moved up into the repo root.
+
+**Decision — gbrain integration:** Cloned gbrain
+(https://github.com/garrytan/gbrain) to inspect its actual interface before
+writing integration code, since SPEC.md v1 assumed it was an embeddable
+storage/retrieval library. It is not: gbrain is a Bun-based CLI + MCP server,
+backed by Postgres or PGLite, that treats a git repo of markdown files
+("brain repo") as the system of record and syncs it into a DB for hybrid
+(vector + BM25 + graph) retrieval and LLM-synthesized answers (`gbrain
+search` vs `gbrain think`). It expects to run as a long-lived process/daemon,
+not to be imported into a serverless function.
+
+**Trade-off surfaced to user:** Vercel serverless functions can't host a
+Bun CLI with a local PGLite file or a long-running MCP server. Three options
+were laid out: (a) demo everything locally, skip Vercel; (b) deploy the
+Next.js app to Vercel and run gbrain separately as `gbrain serve --http` on
+an always-on host (Railway/Fly.io free tier), calling it remotely over HTTP
+with a bearer token; (c) drop gbrain entirely for a lightweight SQLite+
+embeddings store, documented as a deliberate SDD deviation.
+
+**Decision:** User chose (b) — Vercel app + separately hosted gbrain server.
+This is the higher-effort path but keeps us honest to the assignment's
+explicit "store data in gbrain" requirement while still getting a real
+Vercel deploy link. SPEC.md §3 architecture diagram updated to show the
+split: Next.js/Vercel talks to gbrain over HTTP/MCP rather than importing it
+in-process. Ingestion pipeline now renders normalized data as gbrain-native
+markdown pages (frontmatter + body) rather than assuming a JS API.
+
+**Risk noted:** This adds real infra work (hosting choice, token auth, two
+deploy targets to keep in sync) on top of an already tight 6-day timeline.
+If gbrain hosting eats too much time, fallback is to demo locally with
+`gbrain serve` running alongside `next dev` and treat the Vercel deploy as
+best-effort, not required — success criteria in SPEC.md §9 only requires a
+"reliably local-runnable" UI at minimum.
+
+**Current state:** Next.js app scaffolded and building at repo root. gbrain
+cloned to a scratch location for reference (not yet installed — needs Bun,
+which is not yet installed on this machine). Next: install Bun, install
+gbrain, `gbrain init --pglite` locally for dev, pick a remote host
+(Railway vs Fly.io) for the demo deployment, then start Google Cloud OAuth
+setup for Gmail + Drive scopes.

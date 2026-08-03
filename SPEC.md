@@ -41,47 +41,53 @@ grounded, conversational answers.
 
 ## 3. Architecture
 
+**Update (2026-08-03):** gbrain is not an embeddable npm library — it's a
+Bun-based CLI + MCP server backed by its own Postgres/PGLite database and a
+git-tracked "brain repo" of markdown pages. It cannot run inside a Vercel
+serverless function (no persistent local DB, no Bun runtime there). Decision:
+host gbrain separately (`gbrain serve --http` on a small always-on box —
+Railway or Fly.io free tier) and have the Vercel-deployed Next.js app call it
+remotely over its HTTP/MCP interface with a bearer token. See JOURNAL.md entry
+2026-08-03 for the full trade-off discussion.
+
 ```
-                     ┌─────────────────────────┐
-                     │   Next.js App (Vercel)  │
-                     │                         │
-  Browser  ───────▶  │  Chat UI (App Router)   │
-                     │  /api/chat  (streaming) │
-                     │  /api/ingest/gmail      │
-                     │  /api/ingest/drive      │
-                     │  /api/auth/google       │
-                     └───────────┬─────────────┘
-                                 │
-                     ┌───────────▼─────────────┐
-                     │   Ingestion pipeline     │
-                     │  - Gmail API client       │
-                     │  - Drive API client       │
-                     │  - Normalizer (→ gbrain   │
-                     │    document schema)       │
-                     └───────────┬─────────────┘
-                                 │
-                     ┌───────────▼─────────────┐
-                     │        gbrain            │
-                     │  (ingested doc store +   │
-                     │   retrieval interface)   │
-                     └───────────┬─────────────┘
-                                 │
-                     ┌───────────▼─────────────┐
-                     │  Query / reasoning layer │
-                     │  - Router: Tier1 vs Tier2│
-                     │  - Retrieval over gbrain │
-                     │  - Cross-source join     │
-                     │    (email↔drive matching)│
-                     │  - Claude (Anthropic API)│
-                     │    for final synthesis   │
-                     └───────────────────────────┘
+┌─────────────────────────┐        ┌──────────────────────────────┐
+│   Next.js App (Vercel)  │        │  gbrain host (Railway/Fly.io) │
+│                         │        │                                │
+│  Chat UI (App Router)   │  HTTP  │  gbrain serve --http           │
+│  /api/chat (streaming)  │◀──────▶│  (bearer token auth)           │
+│  /api/ingest/gmail      │        │  Postgres/PGLite + brain repo   │
+│  /api/ingest/drive      │        │  gbrain search / gbrain think  │
+│  /api/auth/google       │        └──────────────────────────────┘
+└───────────┬─────────────┘
+            │
+┌───────────▼─────────────┐
+│   Ingestion pipeline      │
+│  - Gmail API client       │
+│  - Drive API client       │
+│  - Normalizer (→ gbrain   │
+│    markdown page schema)  │──▶ writes pages, then calls gbrain's
+└───────────────────────────┘    remote /ingest or sync endpoint
+
+┌───────────────────────────┐
+│  Query / reasoning layer   │
+│  - Router: Tier1 vs Tier2  │
+│  - Calls gbrain search/    │
+│    think over HTTP         │
+│  - Cross-source join       │
+│    (email↔drive matching)  │
+│  - Claude (Anthropic API)  │
+│    for final synthesis     │
+└───────────────────────────┘
 ```
 
 ## 4. Data model
 
-Every ingested item (email, drive file) is normalized to a common shape before
-being handed to gbrain, so retrieval and cross-source joins don't need to know
-source-specific schemas:
+Every ingested item (email, drive file) is normalized to a common shape, then
+serialized as a markdown page (frontmatter + body, gbrain's native format)
+before being written into the brain repo, so retrieval and cross-source joins
+don't need to know source-specific schemas. `BrainDocument` below is the
+in-memory shape used by our normalizer before it's rendered to markdown:
 
 ```ts
 type BrainDocument = {
