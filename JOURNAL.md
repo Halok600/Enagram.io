@@ -2080,3 +2080,65 @@ live; the write (auto-linking) side is implemented, statically verified,
 and was proven correct via a manual pre-test of the exact same
 add_link/traverse_graph primitives it calls, but not yet exercised by
 the real ingestion code path on genuinely new data. Ready to push.
+
+---
+
+## 2026-08-10 — Feature #8: voice input (last of the 8-feature list)
+
+**Context:** Last feature on the original list. Fundamentally different
+scope from #1-#7 — pure browser API (Web Speech API), zero backend/
+gbrain/OAuth involvement, no new env vars or credentials.
+
+**Implementation:**
+- [`useSpeechRecognition.ts`](src/app/chat/useSpeechRecognition.ts) (new
+  hook) — wraps `SpeechRecognition`/`webkitSpeechRecognition` (Chrome/Edge
+  ship it prefixed; Firefox doesn't support it at all as of this writing,
+  hence the explicit `isSupported` check). `continuous: true` +
+  `interimResults: true`; final transcript segments accumulate into a
+  running base string, interim (not-yet-finalized) text is appended live
+  on top for real-time feedback, so the input box updates as the user
+  speaks rather than only after each pause.
+- [`Chat.tsx`](src/app/chat/Chat.tsx) — mic button between the input and
+  Send, only rendered when `speech.isSupported` (hide entirely rather
+  than show a control that would silently do nothing on Firefox). Click
+  starts/stops listening; transcribed text lands in the same input box
+  the user can still edit before sending — deliberately NOT auto-send on
+  final transcript, so a misheard word doesn't get sent unreviewed.
+  Listening state shown via a pulsing stop-icon button (same animation
+  language as the sidebar's existing "active tool" pulse) and the input
+  placeholder swaps to "listening...". Errors (mic permission denied, no
+  speech detected) surface as inline text under the input.
+
+**Bug hit and fixed — same React purity lint class as earlier rounds.**
+The natural first implementation computed `isSupported` via
+`useEffect(() => setIsSupported(...), [])` — the standard-looking pattern
+for "browser API existence can only be checked client-side, avoid an SSR/
+hydration mismatch by deferring to an effect." This project's strict
+React-Compiler-aligned lint config rejected it: "Calling setState()
+directly within an effect can trigger cascading renders." Root cause of
+why the naive fix (a lazy `useState(() => hasSpeechRecognition())`
+initializer) isn't safe either: that computes differently on the server
+(no `window`, always false) vs. the client's first render, which for a
+value that directly gates whether a whole button renders would be a real
+hydration mismatch, not just a lint nag. Fixed with the textbook-correct
+primitive for exactly this problem — `useSyncExternalStore` with a
+never-firing subscribe (browser support doesn't change over a page's
+lifetime) and a `getServerSnapshot` that safely returns `false` for SSR.
+This is what the hook is actually designed for (reading external,
+non-React state safely across server/client) and sidesteps the lint rule
+entirely rather than fighting it.
+
+**Verified:**
+- `tsc --noEmit`, `eslint src evals`, `next build` all clean.
+- Not verified live: the mic button only renders inside the authenticated
+  chat UI (behind Google OAuth), which — same limitation noted throughout
+  this entire project — can't be completed by the agent itself, and real
+  speech input obviously can't be produced by an automated tool anyway.
+  Asked the user to test directly: click the mic, grant the browser's
+  microphone permission prompt, speak, confirm the transcript lands in
+  the input box and can still be edited before sending. Also flagged:
+  Firefox won't show the button at all (unsupported), Chrome/Edge should.
+
+**Current state:** Feature #8 implemented and statically verified; live
+confirmation pending. This is the last of the original 8-feature list —
+once verified, all 8 bonus features are shipped.

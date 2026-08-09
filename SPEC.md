@@ -48,6 +48,21 @@ grounded, conversational answers.
   2026-08-10). Read-only for the model beyond the two explicit tools
   (`save_preference`/`forget_preference`) — no automatic/proactive
   extraction from casual conversation.
+- **Graph-based cross-source linking** — **added 2026-08-10**: ingestion
+  auto-links pages across different sources that share a participant
+  email (a deterministic signal, not an LLM judgment call), using gbrain's
+  link/graph primitives (`add_link`/`traverse_graph`). A new `find_related`
+  tool lets the model follow an explicit link to another source instead of
+  guessing a new search query — e.g. from a Gmail thread straight to the
+  Drive file it's linked to. Capped and gated to only run when a sync
+  finds real changes, so it doesn't add latency to the common no-op
+  auto-sync case.
+- **Voice input** — **added 2026-08-10**: dictate into the chat input via
+  the browser's Web Speech API (Chrome/Edge; Firefox doesn't support it,
+  so the mic control is hidden there rather than shown broken). Pure
+  frontend, no backend/gbrain/OAuth involvement. Transcribed text lands
+  in the input box for the user to review/edit before sending — never
+  auto-sent on a raw transcript.
 
 ### Out of scope (explicitly, to protect the timeline)
 - Multi-user auth / account management — single user (me), OAuth to my own
