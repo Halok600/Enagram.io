@@ -1,4 +1,4 @@
-# Eval run — 2026-08-05T18:11:24.060Z
+# Eval run — 2026-08-09T16:54:52.865Z
 
 Model: `gemini-flash-lite-latest` · Cases: 5 · Passed: 5/5
 
@@ -8,17 +8,15 @@ Model: `gemini-flash-lite-latest` · Cases: 5 · Passed: 5/5
 
 **Checks:** SPEC.md §5 Tier1 #1. Grounding check: no such email exists in the connected inbox — must search, then correctly report not found, not fabricate one.
 
-**Tools used:** search_gmail, search_drive — expected [search_gmail] — OK
+**Tools used:** search_gmail — expected [search_gmail] — OK
 
 **Content check:** OK
 
 **Answer:**
 
-> I couldn't find any email from Stripe about a failed payment in your connected Gmail data. 
-> 
-> *(Note: The query "Find the email from Stripe about the failed payment" appears as an example prompt in your [skilllayer_sde_I_takehome](https://docs.google.com/document/d/137QC0GmLIakjGt0jV6tlSSUVmnarqjZny34E0YR0vCA/edit?usp=drivesdk) document, but the actual email does not exist in your ingested emails.)*
+> I couldn't find any email from Stripe about a failed payment in your connected Gmail data.
 
-_30.5s_
+_71.5s_
 
 ---
 
@@ -34,13 +32,9 @@ _30.5s_
 
 **Answer:**
 
-> I checked your Google Drive, but I couldn't find any specific edit timestamps within the last week for your files. The most recent files available in your connected data are:
-> 
-> * [httpsgithub.comHalok600Reddit-insig.txt](https://drive.google.com/file/d/1pzBwEWBrYdwtEhdRskBvGwQgbGSrxvZN/view?usp=drivesdk) (March 9, 2026)
-> * [Resume_2026_APRIL.pdf](https://drive.google.com/file/d/1Fr5kSY_cXEIVAG-1X9R-3xm1LzzHw8jl/view?usp=drivesdk) (July 4, 2026)
-> * [Resume_2026_Feb.pdf](https://drive.google.com/file/d/1fpoJ9COvkLf5oJWe4CAtHp65yCgl3Jci/view?usp=drivesdk) (May 1, 2026)
+> I couldn't find any Drive files edited or shared in the last week (the week leading up to August 9, 2026). The most recent Drive file updates in my connected data are from May 2026 (such as [Resume_2026_Feb.pdf](https://drive.google.com/file/d/1fpoJ9COvkLf5oJWe4CAtHp65yCgl3Jci/view?usp=drivesdk)), so I don't have records of any activity from this past week.
 
-_19.9s_
+_19.2s_
 
 ---
 
@@ -56,14 +50,15 @@ _19.9s_
 
 **Answer:**
 
-> Your most recent email thread with Nirmit from SkillLayer (from August 3, 2026) is titled **[SHORTLISTED STUDENTS](https://mail.google.com/mail/u/0/#all/19fc76dd1908a913)**. 
+> Here is a summary of your most recent email thread with Nirmit from SkillLayer:
 > 
-> Here is a summary of the thread:
-> * **Status:** You have been congratulated and shortlisted for the **MC Round** of the recruitment process.
-> * **Next Steps:** You were provided with a take-home assignment via a [Google Doc Assignment Link](https://docs.google.com/document/d/137QC0GmLIakjGt0jV6tlSSUVmnarqjZny34E0YR0vCA/edit?tab=t.0). 
-> * **Timeline:** Candidates were instructed to review the guidelines carefully and complete the assignment within the timeline specified in the document.
+> * **Subject:** **[Fwd:  Take Home Assignment for selected folks](https://mail.google.com/mail/u/0/#all/19fc149dba64bd06)** (forwarded on August 2, 2026, originally sent by Nirmit on August 1, 2026)
+> * **Context:** Nirmit forwarded/sent out instructions regarding **Round 1 (Take Home Assignment)** for candidates selected from the Software Development Engineer I recruitment process.
+> * **Key Details:**
+>   * Candidates were directed to review the assignment document via [this Google Doc link](https://docs.google.com/document/d/137QC0GmLIakjGt0jV6tlSSUVmnarqjZny34E0YR0vCA/edit?usp=sharing).
+>   * The email notes that **Round 2** will consist of an online face-to-face (F2F) interview.
 
-_10.2s_
+_20.5s_
 
 ---
 
@@ -79,12 +74,14 @@ _10.2s_
 
 **Answer:**
 
-> Your status for the SkillLayer application and take-home assignment is as follows:
+> Here is your status on the SkillLayer application and the take-home assignment based on your connected Gmail and Google Drive:
 > 
-> * **Application Status:** You have been shortlisted for the **MC Round** of the recruitment process, as confirmed by the email from Nirmit at SkillLayer [SHORTLISTED STUDENTS](https://mail.google.com/mail/u/0/#all/19fc76dd1908a913).
-> * **Take-Home Assignment:** Yes, the take-home assignment document is available in your Google Drive under the title [skilllayer_sde_I_takehome](https://docs.google.com/document/d/137QC0GmLIakjGt0jV6tlSSUVmnarqjZny34E0YR0vCA/edit?usp=drivesdk). It requires building a conversational agent ("Personal Brain") over your own data.
+> * **Application Status:** You applied for the **Software Development Engineer I** position at skiLLLayer (as seen in your [Application for Software Development Engineer I – Priyanshu Tiwari](https://mail.google.com/mail/u/0/#all/19fbdf415706daa2) email). You have since been shortlisted for the next stage of the recruitment process, as confirmed by the [SHORTLISTED STUDENTS](https://mail.google.com/mail/u/0/#all/19fc76dd1908a913) email from Nirmit at SkillLayer.
+> * **Take-Home Assignment:** Yes, the take-home assignment document is present in your Google Drive as **[skilllayer_sde_I_takehome](https://docs.google.com/document/d/137QC0GmLIakjGt0jV6tlSSUVmnarqjZny34E0YR0vCA/edit?usp=drivesdk)**. 
+>   * **Task:** The assignment requires you to build a **Personal Brain** (a conversational agent over your own data that queries at least two connected tools with cross-source reasoning and a chat UI).
+>   * **Deadline:** The deadline mentioned in the document is August 9, 2026 at 12 AM / August 10, 2026 at 12 PM, to be submitted by replying to the same mail thread (`nirmit@skilllayer.tech` and CC `cristian@skilllayer.tech`).
 
-_11.1s_
+_22.7s_
 
 ---
 
@@ -100,10 +97,8 @@ _11.1s_
 
 **Answer:**
 
-> I couldn't find any record in your connected Gmail or Google Drive data of sending a contract draft to Priya (or receiving a reply from her). 
-> 
-> *(Note: The mention of Priya/contract draft in your data appears only as an example query in the [skilllayer_sde_I_takehome](https://docs.google.com/document/d/137QC0GmLIakjGt0jV6tlSSUVmnarqjZny34E0YR0vCA/edit?usp=drivesdk) document!)*
+> I couldn't find any record of sending a contract draft to Priya, nor any replies from her, in your connected Gmail and Google Drive data.
 
-_10.8s_
+_39.0s_
 
 ---

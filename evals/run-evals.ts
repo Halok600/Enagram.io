@@ -17,7 +17,7 @@ import { generateText, stepCountIs } from "ai";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { brainTools } from "@/lib/query/tools";
-import { CHAT_MODEL_ID, SYSTEM_PROMPT } from "@/lib/query/config";
+import { CHAT_MODEL_ID, getSystemPrompt } from "@/lib/query/config";
 import { EVAL_CASES, type EvalCase } from "./cases";
 
 const NOT_FOUND_PATTERN =
@@ -39,7 +39,7 @@ async function runCase(evalCase: EvalCase): Promise<CaseResult> {
   try {
     const result = await generateText({
       model: google(CHAT_MODEL_ID),
-      system: SYSTEM_PROMPT,
+      system: getSystemPrompt(),
       prompt: evalCase.query,
       tools: brainTools,
       stopWhen: stepCountIs(5),

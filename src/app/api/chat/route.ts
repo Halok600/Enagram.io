@@ -9,7 +9,7 @@ import {
 } from "ai";
 import { auth } from "@/auth";
 import { brainTools } from "@/lib/query/tools";
-import { CHAT_MODEL_ID, SYSTEM_PROMPT } from "@/lib/query/config";
+import { CHAT_MODEL_ID, getSystemPrompt } from "@/lib/query/config";
 
 // 60s is the max Vercel's Hobby plan allows. Needed as headroom: the model
 // can call search_gmail/search_drive multiple times per turn, each one a
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
 
     const result = streamText({
       model: google(CHAT_MODEL_ID),
-      system: SYSTEM_PROMPT,
+      system: getSystemPrompt(),
       messages: await convertToModelMessages(messages),
       tools: brainTools,
       stopWhen: stepCountIs(5),

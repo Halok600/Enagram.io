@@ -1399,3 +1399,78 @@ verified as far as possible without an authenticated session, plus two
 real bugs found and fixed along the way (the hover-glow no-op and the
 hydration mismatch) that weren't part of the original ask but directly
 affect it.
+
+---
+
+## 2026-08-09 — Deadline extended to Aug 18; shipped #1 PDF extraction, #2 freshness callouts, #3 auto-sync-on-load
+
+**Context:** Submission deadline extended from Aug 9 to **2026-08-18**
+(user confirmed directly). Used the extra runway to research feature
+ideas from comparable open-source "personal assistant over your data"
+projects, proposed 8 candidates, and the user picked three to build now:
+(1) PDF text extraction for Drive files, (2) data-freshness callouts in
+answers, (3) auto-sync on server startup.
+
+**#1 — PDF content extraction ([`drive.ts`](src/lib/google/drive.ts)).**
+Real files like `Resume_2026_Feb.pdf` were previously only findable by
+filename — PDFs hit the same "binary format, skip content" branch as
+images/Slides/Sheets, so nothing inside them was ever searchable. Added
+`unpdf` (chosen specifically because it's pdfjs-based but built to avoid
+canvas/worker native deps that don't exist on Vercel's serverless
+functions — a real constraint, not a hypothetical one, given the whole
+architecture already routes around exactly this class of problem for
+gbrain itself). New branch in `extractContent()`: fetch the file as
+`arraybuffer`, `getDocumentProxy()` + `extractText({ mergePages: true })`.
+
+**#2 — Freshness callouts + `SYSTEM_PROMPT` → `getSystemPrompt()`
+([`config.ts`](src/lib/query/config.ts)).** The model previously had no
+anchor for "today" at all, so it could never reason about staleness (a
+March result would be presented with the same confidence as a same-day
+one). Converting the prompt to a function computed per-call (rather than
+a module-level constant computed once at import time) matters
+specifically because of Vercel's warm-reuse behavior: a serverless
+function instance can stay warm and serve many requests across real
+calendar days without a fresh cold start, so a string built once with
+`new Date()` at import time would silently freeze "today" at whatever
+date the instance last cold-started, going stale for every request after
+without erroring. Added an explicit "Freshness" rule instructing the
+model to say so plainly when the most relevant result predates today by
+a wide margin, rather than presenting old data as current. Updated both
+call sites — [`route.ts`](src/app/api/chat/route.ts) and
+[`run-evals.ts`](evals/run-evals.ts) — to call `getSystemPrompt()` so the
+eval harness keeps exercising the exact prompt production uses.
+
+**#3 — Auto-sync on load ([`Workspace.tsx`](src/app/chat/Workspace.tsx)).**
+Literal "sync on server startup" isn't reachable in this architecture —
+Next's server lifecycle has no authenticated user session at that point,
+and ingestion needs one (it's local-only by design, see 2026-08-04
+entry). Built the practical equivalent instead: a `useEffect` gated on
+`ingestionEnabled` (same flag that hides the button entirely on Vercel)
+fires `POST /api/ingest/sync` once per page load via a `useRef` guard,
+silently, the moment an authenticated session mounts — so local-dev demo
+data is fresh without a manual click first. The visible Re-sync button is
+unchanged and still available for a manual re-sync with its own
+success/failure UI.
+
+**Verified:**
+- `tsc --noEmit`, `eslint src evals`, `next build` all clean.
+- `bun run evals/run-evals.ts` against live Render/Supabase/Gemini:
+  **5/5 passed.** [`EVAL_LOG.md`](evals/EVAL_LOG.md) confirms the
+  freshness rule is genuinely working, not just present in the prompt
+  text: `tier1-drive-recency`'s answer explicitly reasons about "the week
+  leading up to August 9, 2026" and correctly reports the most recent
+  Drive activity it has is from May — proof `getSystemPrompt()` is
+  injecting the real current date per-call, not a frozen one.
+- Not yet covered by the eval suite (no case queries PDF-internal content
+  specifically, only filenames/metadata) — flagged to the user to verify
+  live: run a query whose answer only exists inside a PDF's actual text
+  (e.g. a skill or detail from inside a resume PDF, not in its filename),
+  and confirm auto-sync fires on page load (visible via `console.log
+  ("Auto-sync on load:", ...)` in the browser devtools console) without
+  clicking Re-sync.
+
+**Current state:** All three features implemented, type/lint/build clean,
+and the full eval suite passing live against production infra. PDF
+content-extraction correctness specifically still needs one live
+user-run query to confirm end-to-end, since it's the one piece the
+automated eval suite doesn't exercise.

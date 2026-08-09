@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useChat, type UseChatHelpers } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { Sidebar } from "./Sidebar";
@@ -56,6 +56,22 @@ export function Workspace({
   });
 
   const activeTools = computeActiveTools(chat.messages);
+
+  // "Auto-sync on server startup" isn't actually reachable — Next's server
+  // lifecycle has no user session/OAuth token at that point (ingestion needs
+  // one). This is the practical equivalent: fire once automatically as soon
+  // as an authenticated page loads, so the demo data is already fresh
+  // without a manual click first. Silent/best-effort — the visible SyncButton
+  // still exists for a manual re-sync, and still shows its own result.
+  const autoSyncedRef = useRef(false);
+  useEffect(() => {
+    if (!ingestionEnabled || autoSyncedRef.current) return;
+    autoSyncedRef.current = true;
+    fetch("/api/ingest/sync", { method: "POST" })
+      .then((res) => res.json())
+      .then((data) => console.log("Auto-sync on load:", data))
+      .catch((err) => console.error("Auto-sync on load failed:", err));
+  }, [ingestionEnabled]);
 
   function sendStampedMessage(text: string) {
     setSystemError(null);

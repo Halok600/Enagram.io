@@ -1,4 +1,5 @@
 import { google } from "googleapis";
+import { extractText, getDocumentProxy } from "unpdf";
 
 export type DriveFile = {
   id: string;
@@ -40,8 +41,24 @@ async function extractContent(
       return res.data as unknown as string;
     }
 
-    // Binary formats (PDF, images, slides, sheets, etc.) are skipped for now —
-    // out of scope per SPEC.md; we index metadata (name/owners/dates) only.
+    // PDFs (resumes, JDs, etc. — real files people actually have in Drive,
+    // not just Google Docs) — previously skipped entirely, so a file like
+    // "Resume_2026_APRIL.pdf" was only ever findable by filename, never by
+    // its actual content. `unpdf` is pdfjs-based but built to run without a
+    // canvas/worker dependency, which matters on Vercel's serverless
+    // functions where those aren't available.
+    if (mimeType === "application/pdf") {
+      const res = await drive.files.get(
+        { fileId, alt: "media" },
+        { responseType: "arraybuffer" },
+      );
+      const pdf = await getDocumentProxy(new Uint8Array(res.data as ArrayBuffer));
+      const { text } = await extractText(pdf, { mergePages: true });
+      return text;
+    }
+
+    // Other binary formats (images, Slides, Sheets) still skipped — out of
+    // scope per SPEC.md; we index metadata (name/owners/dates) only.
     return "";
   } catch (err) {
     console.error(`Failed to extract content for Drive file ${fileId}`, err);
