@@ -1936,3 +1936,25 @@ through `compiled_truth` correctly.
 **Current state:** Feature #6 implemented and statically verified;
 live confirmation pending — asked the user to test a save + a fresh
 question that should reflect it, plus a forget.
+
+---
+
+## 2026-08-10 — Feature #6 verified live end-to-end
+
+**Verified live:** user asked the agent to remember a job-targeting
+preference ("mainly targeting AI/SDE roles at early-stage startups") —
+`save_preference` fired, confirmed in the reply. Reloaded the page (a
+genuinely separate session/conversation, not just scrolling up) and
+asked "what do you know about my preferences?" — the agent correctly
+listed BOTH the new preference and the earlier one saved during this
+feature's own live testing ("prefers concise, bullet-pointed answers"),
+proving the injection-into-system-prompt design actually works across
+sessions, not just within a single chat's context window. This was the
+one thing the eval suite structurally couldn't test (no persistent
+session across eval cases) — confirms the core value of this feature
+over a one-off in-context mention.
+
+**Current state:** Feature #6 fully implemented and confirmed working
+live end-to-end. 6 of the 8 originally-listed bonus features are now
+shipped (#1-#6). Remaining: #7 graph-based cross-source linking, #8
+voice input — neither started. Ready to push.
