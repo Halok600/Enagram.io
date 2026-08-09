@@ -8,7 +8,7 @@ import {
   type UIMessage,
 } from "ai";
 import { auth } from "@/auth";
-import { brainTools } from "@/lib/query/tools";
+import { createBrainTools } from "@/lib/query/tools";
 import { CHAT_MODEL_ID, getSystemPrompt } from "@/lib/query/config";
 
 // 60s is the max Vercel's Hobby plan allows. Needed as headroom: the model
@@ -60,7 +60,7 @@ export async function POST(req: Request) {
       model: google(CHAT_MODEL_ID),
       system: getSystemPrompt(),
       messages: await convertToModelMessages(messages),
-      tools: brainTools,
+      tools: createBrainTools(session.accessToken),
       stopWhen: stepCountIs(5),
     });
 

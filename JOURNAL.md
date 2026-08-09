@@ -1527,3 +1527,99 @@ session finishes) — asked the user to retry.
 **Current state:** Fix implemented and statically verified; awaiting one
 more live confirmation from the user that a collided auto-sync now
 degrades gracefully instead of surfacing as a 500.
+
+---
+
+## 2026-08-09 — Feature #4: draft-only Gmail replies
+
+**Context:** Continuing the 8-feature list from the earlier deadline
+extension, user asked to build #4 next: let the agent draft a reply to a
+specific email when asked, without ever sending anything. This is the
+first genuine write capability in the app — SPEC.md §2 previously scoped
+the whole agent as read-only, so this needed an explicit, narrow,
+documented exception rather than a silent scope change.
+
+**Safety design, decided before writing code:** Google has no OAuth scope
+that grants draft-creation without also technically permitting send —
+`gmail.compose` covers both `drafts.create` and `drafts.send`/
+`messages.send`. Rather than pretend the scope itself enforces
+"draft-only," made it an application-code guarantee instead: grepped to
+confirm `drafts.send`/`messages.send` are called nowhere in the codebase,
+only `drafts.create`. Documented this plainly in both
+[`auth.ts`](src/auth.ts) (scope comment) and SPEC.md §2, rather than
+overclaiming what the OAuth grant restricts.
+
+**Implementation:**
+- [`auth.ts`](src/auth.ts) — added `gmail.compose` to the requested scope
+  list, alongside the existing readonly Gmail/Drive scopes.
+- [`gmail.ts`](src/lib/google/gmail.ts) — new `createDraftReply(accessToken,
+  { threadId, body })`. Fetches the thread's most recent message (`format:
+  "metadata"`, just the headers needed) to find who to reply to and build
+  correct `In-Reply-To`/`References` headers from the original message's
+  real RFC 2822 `Message-ID` header (NOT Gmail's API `id` — a different
+  value; needed for Gmail to attach the draft to the existing thread
+  instead of starting a new one) and a `Re:`-prefixed subject, then calls
+  `drafts.create`.
+- [`tools.ts`](src/lib/query/tools.ts) — `brainTools` (a static object)
+  became `createBrainTools(accessToken?)` (a factory), because the new
+  `draft_gmail_reply` tool needs the requesting user's own live OAuth
+  token to write to their real Gmail — unlike the two search tools, which
+  always go through the shared remote gbrain server with its own static
+  token. Also added `extractGmailThreadId()`: the citation `url`
+  search_gmail already returns
+  (`https://mail.google.com/mail/u/0/#all/<threadId>`) carries the exact
+  id `draft_gmail_reply` needs, so it's parsed server-side into a
+  `threadId` field on gmail results — the model passes it straight
+  through from a prior search_gmail call instead of parsing a URL itself.
+- [`config.ts`](src/lib/query/config.ts) — new system prompt rule: only
+  draft when explicitly asked (never proactively), always say plainly
+  that a DRAFT was created (never "sent"), and hand back the `webLink` so
+  the user reviews and sends it themselves.
+- [`route.ts`](src/app/api/chat/route.ts) — `createBrainTools(session.accessToken)`.
+- UI: [`Workspace.tsx`](src/app/chat/Workspace.tsx) tracks
+  `tool-draft_gmail_reply` alongside the two search tools for the sidebar's
+  live-activity indicator; [`Sidebar.tsx`](src/app/chat/Sidebar.tsx) gets a
+  `DRAFTING_REPLY` label + `PenLine` icon entry.
+
+**Deliberate design choice — kept the eval harness on a fixed read-only
+tool set, not `createBrainTools()`.** With no accessToken,
+`createBrainTools()` already omits the draft tool, but
+[`run-evals.ts`](evals/run-evals.ts) now imports `searchGmailTool`/
+`searchDriveTool` directly and builds its own two-tool object instead of
+calling the factory at all — evals should never even carry the
+possibility of creating a real Gmail draft as an automated side effect,
+by construction, not just by incidentally lacking a token.
+
+**Bug hit and fixed — type error from an optional key in the tools
+object.** `createBrainTools()`'s conditional spread
+(`...(accessToken ? {draft_gmail_reply: ...} : {})`) produces an object
+type with `draft_gmail_reply` as an optional property. The `ai` SDK
+infers `step.toolCalls` per-call-site as `Array<TypedToolCall<TOOLS>>`,
+and `TypedToolCall`'s mapped type over an optional tool key resolves
+`InferToolInput<TOOLS[NAME]>` in a way that leaks `undefined` into the
+whole union, so `evals/run-evals.ts`'s existing `for (const call of
+step.toolCalls ?? [])` failed with `'call' is possibly 'undefined'` even
+though `toolCalls` itself isn't optional. Root-caused by reading the SDK's
+own `.d.ts` (`StaticToolCall<TOOLS>` in `node_modules/ai/dist/index.d.ts`)
+rather than guessing. Fixed at the actual source — switching evals to the
+fixed two-tool object (see above) sidesteps the optional key entirely,
+which was the right design anyway, not just a type-error workaround.
+
+**Verified:**
+- `tsc --noEmit`, `eslint src evals`, `next build` all clean.
+- `bun run evals/run-evals.ts`: **5/5 still passing** after the
+  `tools.ts` factory refactor — confirms no regression to the existing
+  search/grounding behavior.
+- Not yet verified live: actually creating a real Gmail draft through the
+  chat UI. This needs the user to log out and back in first (existing
+  sessions only have the two readonly scopes cached in their JWT — the
+  new `gmail.compose` scope isn't retroactively granted) and, since the
+  OAuth consent screen is in Testing mode, the user may need to add
+  `gmail.compose` to the consent screen's configured scope list in Google
+  Cloud Console before Google will grant it at all (same requirement the
+  original readonly scopes had — see 2026-08-04 entries).
+
+**Current state:** Feature implemented and statically verified end to
+end; live confirmation pending the user's re-consent (new OAuth scope
+requires logging out/in) and a real "draft a reply to X" test in the
+chat UI.

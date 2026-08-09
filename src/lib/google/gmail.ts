@@ -161,3 +161,77 @@ export async function searchMessages(
 export async function listRecentMessages(accessToken: string, maxResults = 25) {
   return searchMessages(accessToken, "", maxResults);
 }
+
+function buildRawReplyMime({
+  to,
+  subject,
+  inReplyTo,
+  body,
+}: {
+  to: string;
+  subject: string;
+  inReplyTo?: string;
+  body: string;
+}): string {
+  const headers = [
+    `To: ${to}`,
+    `Subject: ${subject}`,
+    "MIME-Version: 1.0",
+    'Content-Type: text/plain; charset="UTF-8"',
+    // In-Reply-To/References are what let Gmail attach this to the existing
+    // thread rather than starting a new one — both need the original
+    // message's actual RFC 2822 Message-ID header, not Gmail's API id.
+    inReplyTo ? `In-Reply-To: ${inReplyTo}` : null,
+    inReplyTo ? `References: ${inReplyTo}` : null,
+  ]
+    .filter((line): line is string => line !== null)
+    .join("\r\n");
+
+  return Buffer.from(`${headers}\r\n\r\n${body}`).toString("base64url");
+}
+
+/**
+ * Creates a Gmail DRAFT replying to the given thread — never sends. Reads the
+ * thread's most recent message to reply to the right person with proper
+ * threading headers, then calls drafts.create (never drafts.send/messages.send
+ * anywhere in this codebase — see the scope comment in auth.ts).
+ */
+export async function createDraftReply(
+  accessToken: string,
+  { threadId, body }: { threadId: string; body: string },
+): Promise<{ draftId: string; to: string; subject: string; webLink: string }> {
+  const gmail = getClient(accessToken);
+
+  const thread = await gmail.users.threads.get({
+    userId: "me",
+    id: threadId,
+    format: "metadata",
+    metadataHeaders: ["From", "Subject", "Message-ID"],
+  });
+
+  const messages = thread.data.messages ?? [];
+  const lastMessage = messages[messages.length - 1];
+  if (!lastMessage) {
+    throw new Error(`Gmail thread ${threadId} has no messages to reply to`);
+  }
+
+  const headers = lastMessage.payload?.headers;
+  const from = headerValue(headers, "From");
+  const originalSubject = headerValue(headers, "Subject");
+  const messageIdHeader = headerValue(headers, "Message-ID");
+  const subject = /^re:/i.test(originalSubject) ? originalSubject : `Re: ${originalSubject}`;
+
+  const raw = buildRawReplyMime({ to: from, subject, inReplyTo: messageIdHeader || undefined, body });
+
+  const draft = await gmail.users.drafts.create({
+    userId: "me",
+    requestBody: { message: { raw, threadId } },
+  });
+
+  return {
+    draftId: draft.data.id ?? "",
+    to: from,
+    subject,
+    webLink: `https://mail.google.com/mail/u/0/#drafts/${draft.data.message?.id ?? ""}`,
+  };
+}

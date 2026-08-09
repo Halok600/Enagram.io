@@ -1,4 +1,4 @@
-import { Mail, HardDrive, Search, Radio } from "lucide-react";
+import { Mail, HardDrive, Search, Radio, PenLine } from "lucide-react";
 import { motion } from "framer-motion";
 import { SyncButton } from "../SyncButton";
 import { disconnect } from "../actions";
@@ -7,6 +7,7 @@ import { ThemeToggle } from "./ThemeToggle";
 const TOOL_META: Record<string, { label: string; icon: typeof Mail }> = {
   search_gmail: { label: "SEARCH_GMAIL", icon: Mail },
   search_drive: { label: "SEARCH_DRIVE", icon: HardDrive },
+  draft_gmail_reply: { label: "DRAFTING_REPLY", icon: PenLine },
 };
 
 function StatusRow({ icon: Icon, label }: { icon: typeof Mail; label: string }) {

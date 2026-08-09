@@ -32,7 +32,17 @@ grounded, conversational answers.
 ### Out of scope (explicitly, to protect the timeline)
 - Multi-user auth / account management — single user (me), OAuth to my own
   Google account only.
-- Write actions (sending email, modifying Drive files) — read-only agent.
+- Write actions — **narrow, deliberate exception added 2026-08-09** (deadline
+  extended to Aug 18, used the room to add draft-only Gmail replies): the
+  agent can create a Gmail **draft** reply when explicitly asked to. It can
+  never send anything — `drafts.send`/`messages.send` are never called
+  anywhere in the codebase, only `drafts.create` (src/lib/google/gmail.ts).
+  Google has no OAuth scope that permits draft-creation without also
+  technically permitting send (`gmail.compose` covers both), so "never
+  sends" is an application-code guarantee, not an OAuth-level one — noted
+  here plainly rather than overclaiming what the scope itself restricts.
+  Everything else (Drive file modification, sending on any other channel)
+  remains fully out of scope and read-only.
 - Real-time sync / webhooks — batch ingestion on demand or on a timer.
 - Slack/Notion connectors — deferred; Gmail+Drive is sufficient to satisfy
   "at least two tools" and Tier 2 examples are Gmail×Drive by design in the

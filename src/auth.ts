@@ -4,6 +4,12 @@ import type { JWT } from "next-auth/jwt";
 
 const GMAIL_READONLY_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
 const DRIVE_READONLY_SCOPE = "https://www.googleapis.com/auth/drive.readonly";
+// Narrowest scope that permits draft creation. Google doesn't offer a
+// draft-only grant — gmail.compose technically also permits sending drafts
+// via the API — so "never sends" is an app-code guarantee (createDraftReply
+// in lib/google/gmail.ts only ever calls drafts.create, never drafts.send /
+// messages.send), not an OAuth-level one. See JOURNAL.md 2026-08-09.
+const GMAIL_COMPOSE_SCOPE = "https://www.googleapis.com/auth/gmail.compose";
 
 const TOKEN_REFRESH_SKEW_MS = 60_000;
 
@@ -48,7 +54,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       authorization: {
         params: {
-          scope: `openid email profile ${GMAIL_READONLY_SCOPE} ${DRIVE_READONLY_SCOPE}`,
+          scope: `openid email profile ${GMAIL_READONLY_SCOPE} ${DRIVE_READONLY_SCOPE} ${GMAIL_COMPOSE_SCOPE}`,
           access_type: "offline",
           prompt: "consent",
         },

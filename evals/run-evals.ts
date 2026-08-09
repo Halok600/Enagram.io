@@ -16,7 +16,7 @@ import { google } from "@ai-sdk/google";
 import { generateText, stepCountIs } from "ai";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
-import { brainTools } from "@/lib/query/tools";
+import { searchGmailTool, searchDriveTool } from "@/lib/query/tools";
 import { CHAT_MODEL_ID, getSystemPrompt } from "@/lib/query/config";
 import { EVAL_CASES, type EvalCase } from "./cases";
 
@@ -40,8 +40,11 @@ async function runCase(evalCase: EvalCase): Promise<CaseResult> {
     const result = await generateText({
       model: google(CHAT_MODEL_ID),
       system: getSystemPrompt(),
+      // Fixed read-only tool set, not createBrainTools() — evals have no
+      // real user session to draft against, and should never even carry
+      // the possibility of creating a live Gmail draft as a side effect.
       prompt: evalCase.query,
-      tools: brainTools,
+      tools: { search_gmail: searchGmailTool, search_drive: searchDriveTool },
       stopWhen: stepCountIs(5),
     });
 

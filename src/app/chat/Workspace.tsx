@@ -6,7 +6,13 @@ import { DefaultChatTransport, type UIMessage } from "ai";
 import { Sidebar } from "./Sidebar";
 import { Chat } from "./Chat";
 
-const TOOL_TYPES = ["tool-search_gmail", "tool-search_drive"] as const;
+const TOOL_TYPES = ["tool-search_gmail", "tool-search_drive", "tool-draft_gmail_reply"] as const;
+
+const TOOL_NAME_BY_PART_TYPE: Record<(typeof TOOL_TYPES)[number], string> = {
+  "tool-search_gmail": "search_gmail",
+  "tool-search_drive": "search_drive",
+  "tool-draft_gmail_reply": "draft_gmail_reply",
+};
 
 /** Tool calls in-flight on the current (last) message — not yet output-available/output-error. */
 function computeActiveTools(messages: UIMessage[]): string[] {
@@ -18,7 +24,7 @@ function computeActiveTools(messages: UIMessage[]): string[] {
     if (!(TOOL_TYPES as readonly string[]).includes(part.type)) continue;
     const state = (part as { state?: string }).state;
     if (state === "output-available" || state === "output-error") continue;
-    active.add(part.type === "tool-search_gmail" ? "search_gmail" : "search_drive");
+    active.add(TOOL_NAME_BY_PART_TYPE[part.type as (typeof TOOL_TYPES)[number]]);
   }
   return Array.from(active);
 }
