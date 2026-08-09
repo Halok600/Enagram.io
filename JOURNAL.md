@@ -1623,3 +1623,44 @@ which was the right design anyway, not just a type-error workaround.
 end; live confirmation pending the user's re-consent (new OAuth scope
 requires logging out/in) and a real "draft a reply to X" test in the
 chat UI.
+
+---
+
+## 2026-08-09 — Feature #4 verified live end-to-end
+
+**Context:** User re-consented (logged out/in, granting the new
+`gmail.compose` scope) and asked the agent to "draft a reply to Nirmit's
+shortlist email saying I'll have the take-home submitted by Friday."
+
+**First attempt correctly failed closed.** Before re-consenting, the
+model found the right thread via search_gmail, attempted
+`draft_gmail_reply`, hit a real Gmail API permission error (old cached
+session token, readonly scopes only), and reported the failure honestly
+to the user instead of pretending to succeed — exactly the grounding
+behavior the system prompt requires elsewhere, holding up for a tool
+error too.
+
+**Second attempt succeeded — real draft, correctly threaded, nothing
+sent.** After re-consent: model called search_gmail, found "SHORTLISTED
+STUDENTS," called draft_gmail_reply, and reported back a created draft
+with a review link. Verified directly in the real Gmail UI: the draft
+appears threaded under the original conversation (visible inline, not a
+disconnected new email) with the correct body text and a "Draft" label.
+
+**One nuance checked and confirmed correct, not a bug:** the draft was
+addressed to **Isha Sharma** (`23102097@mail.jiit.ac.in`), not Nirmit.
+`createDraftReply` always replies to whoever sent the thread's most
+recent message (see 2026-08-09 implementation entry above) — flagged
+this to the user as worth double-checking before trusting the default.
+User confirmed it's actually correct: "SHORTLISTED STUDENTS" was a mass
+email genuinely *sent by* Isha Sharma to a large distribution list
+(visible in the Gmail UI: "to Vivek, Vansh, Mudit, ... nirmit, cristian
+...") — Nirmit was only a cc'd recipient, not the sender, so replying to
+the real sender was the right behavior, not a misfire. No design change
+needed.
+
+**Current state:** Feature #4 fully implemented and confirmed working
+live end-to-end — real Gmail draft created and correctly threaded,
+failure mode (stale scope) degrades honestly instead of silently, and
+the recipient-selection logic verified correct on a real multi-participant
+thread. Ready to push.
