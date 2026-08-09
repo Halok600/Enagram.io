@@ -1,6 +1,13 @@
 import { tool } from "ai";
 import { z } from "zod";
-import { searchGmail, searchDrive, searchCalendar, savePreference, forgetPreference } from "@/lib/brain/gbrain-remote";
+import {
+  searchGmail,
+  searchDrive,
+  searchCalendar,
+  savePreference,
+  forgetPreference,
+  findRelated,
+} from "@/lib/brain/gbrain-remote";
 import { createDraftReply } from "@/lib/google/gmail";
 
 /**
@@ -93,6 +100,19 @@ export const forgetPreferenceTool = tool({
   execute: async ({ fact }) => forgetPreference(fact),
 });
 
+export const findRelatedTool = tool({
+  description:
+    "Find items linked to a specific search result across OTHER sources (e.g. a Drive file and Calendar " +
+    "event linked to a Gmail thread) via gbrain's graph, built from shared participants during ingestion. " +
+    "Pass the slug field from a prior search_gmail/search_drive/search_calendar result. Prefer this over a " +
+    "blind re-search when you've already found one relevant item and need to check other sources for the " +
+    "same real-world thread — it returns exactly what's connected instead of guessing a new query.",
+  inputSchema: z.object({
+    slug: z.string().describe("The slug field from a prior search result"),
+  }),
+  execute: async ({ slug }) => findRelated(slug),
+});
+
 function createDraftGmailReplyTool(accessToken: string) {
   return tool({
     description:
@@ -130,6 +150,7 @@ export function createBrainTools(accessToken?: string): {
   search_calendar: typeof searchCalendarTool;
   save_preference: typeof savePreferenceTool;
   forget_preference: typeof forgetPreferenceTool;
+  find_related: typeof findRelatedTool;
   draft_gmail_reply?: ReturnType<typeof createDraftGmailReplyTool>;
 } {
   return {
@@ -138,6 +159,7 @@ export function createBrainTools(accessToken?: string): {
     search_calendar: searchCalendarTool,
     save_preference: savePreferenceTool,
     forget_preference: forgetPreferenceTool,
+    find_related: findRelatedTool,
     ...(accessToken ? { draft_gmail_reply: createDraftGmailReplyTool(accessToken) } : {}),
   };
 }

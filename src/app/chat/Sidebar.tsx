@@ -1,4 +1,4 @@
-import { Mail, HardDrive, Search, Radio, PenLine, CalendarDays, BookMarked, Eraser } from "lucide-react";
+import { Mail, HardDrive, Search, Radio, PenLine, CalendarDays, BookMarked, Eraser, Network } from "lucide-react";
 import { motion } from "framer-motion";
 import { SyncButton } from "../SyncButton";
 import { disconnect } from "../actions";
@@ -11,6 +11,7 @@ const TOOL_META: Record<string, { label: string; icon: typeof Mail }> = {
   draft_gmail_reply: { label: "DRAFTING_REPLY", icon: PenLine },
   save_preference: { label: "SAVING_MEMORY", icon: BookMarked },
   forget_preference: { label: "FORGETTING", icon: Eraser },
+  find_related: { label: "MAPPING_LINKS", icon: Network },
 };
 
 function StatusRow({ icon: Icon, label }: { icon: typeof Mail; label: string }) {

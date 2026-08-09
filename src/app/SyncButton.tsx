@@ -9,6 +9,7 @@ type SyncResult = {
   calendarCount: number;
   pagesWritten: number;
   committed: boolean;
+  linksCreated: number;
   syncLog: string;
 };
 
@@ -52,7 +53,7 @@ export function SyncButton() {
         <p className="font-mono text-xs leading-snug text-[var(--text-dim)]">
           {result.gmailCount} email(s) + {result.driveCount} file(s) + {result.calendarCount} event(s) →{" "}
           {result.pagesWritten} page(s)
-          {result.committed ? ", synced" : " (no changes)"}.
+          {result.committed ? `, synced (${result.linksCreated} link(s))` : " (no changes)"}.
         </p>
       )}
 

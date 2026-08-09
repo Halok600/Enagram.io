@@ -187,3 +187,115 @@ export async function forgetPreference(fact: string): Promise<{ status: "removed
   await mcpCall("put_page", { slug: PREFERENCES_SLUG, content: buildPreferencesPageContent(remaining) });
   return { status: "removed" };
 }
+
+/**
+ * Feature #7 (graph-based cross-source linking). Auto-links pages across
+ * DIFFERENT sources that share a participant email — e.g. a Gmail thread,
+ * a Calendar event, and a Drive file all involving nirmit@skilllayer.tech
+ * are almost certainly the same real-world thread, a much stronger signal
+ * than re-running semantic search per source. Deliberately deterministic
+ * (no LLM judgment call) after feature #6's extract_facts detour showed
+ * how costly an opaque LLM-based pipeline is to debug for a graded demo.
+ * `relates_to` (gbrain-base-v2's generic bidirectional link type) is the
+ * closest fit — no type in the schema pack is cross-source-relationship
+ * specific.
+ */
+const RELATES_TO = "relates_to";
+const MAX_DOCS_PER_PARTICIPANT = 6; // drop overly-common participants (mailing lists, frequent coworkers) — not a meaningful signal
+const MAX_LINKS_PER_SYNC = 30; // ingestion is local-only but still shouldn't hang for minutes on link creation
+
+export async function linkRelatedDocuments(
+  docs: { slug: string; source: string; participants: string[] }[],
+  ownEmail: string,
+): Promise<{ linksCreated: number; linksAttempted: number }> {
+  const bySource = new Map<string, { slug: string; source: string }[]>();
+  for (const doc of docs) {
+    for (const participant of doc.participants) {
+      if (participant.toLowerCase() === ownEmail.toLowerCase()) continue; // present on nearly everything — not a signal
+      const list = bySource.get(participant) ?? [];
+      list.push({ slug: doc.slug, source: doc.source });
+      bySource.set(participant, list);
+    }
+  }
+
+  const seenPairs = new Set<string>();
+  const pairs: { from: string; to: string }[] = [];
+  for (const entries of bySource.values()) {
+    if (entries.length < 2 || entries.length > MAX_DOCS_PER_PARTICIPANT) continue;
+    for (let i = 0; i < entries.length; i++) {
+      for (let j = i + 1; j < entries.length; j++) {
+        if (entries[i].source === entries[j].source) continue; // cross-source only
+        const key = [entries[i].slug, entries[j].slug].sort().join("|");
+        if (seenPairs.has(key)) continue;
+        seenPairs.add(key);
+        pairs.push({ from: entries[i].slug, to: entries[j].slug });
+      }
+    }
+  }
+
+  const capped = pairs.slice(0, MAX_LINKS_PER_SYNC);
+  let linksCreated = 0;
+  // Sequential, not Promise.all: this is a write burst against the shared
+  // remote server, not latency-sensitive like the Vercel-side search path.
+  for (const { from, to } of capped) {
+    try {
+      await mcpCall("add_link", { from, to, link_type: RELATES_TO, link_source: "shared-participant" });
+      linksCreated++;
+    } catch (err) {
+      console.error(`Failed to link ${from} -> ${to}`, err);
+    }
+  }
+  return { linksCreated, linksAttempted: capped.length };
+}
+
+type GraphEdge = { from_slug: string; to_slug: string; link_type: string };
+type RelatedPage = { slug: string; title: string; type: string; url?: string; date?: string };
+
+/**
+ * The model's read-side counterpart: given a slug from a prior search
+ * result, return whatever's linked to it (one hop, either direction —
+ * `relates_to` is its own inverse, but checking both directions explicitly
+ * doesn't depend on gbrain materializing the reverse edge automatically).
+ */
+export async function findRelated(slug: string): Promise<{ count: number; results: RelatedPage[] }> {
+  try {
+    const edges = await mcpCall<GraphEdge[]>("traverse_graph", {
+      slug,
+      direction: "both",
+      depth: 1,
+      link_type: RELATES_TO,
+    });
+
+    const relatedSlugs = Array.from(
+      new Set(edges.map((e) => (e.from_slug === slug ? e.to_slug : e.from_slug))),
+    ).slice(0, 10);
+
+    const results = await Promise.all(
+      relatedSlugs.map(async (relatedSlug): Promise<RelatedPage | null> => {
+        try {
+          const page = await mcpCall<{
+            title?: string;
+            type?: string;
+            frontmatter?: { url?: string; date?: string };
+          }>("get_page", { slug: relatedSlug });
+          return {
+            slug: relatedSlug,
+            title: page.title ?? relatedSlug,
+            type: page.type ?? "",
+            url: page.frontmatter?.url,
+            date: page.frontmatter?.date,
+          };
+        } catch (err) {
+          console.error(`Failed to fetch related page ${relatedSlug}`, err);
+          return null;
+        }
+      }),
+    );
+
+    const filtered = results.filter((r): r is RelatedPage => r !== null);
+    return { count: filtered.length, results: filtered };
+  } catch (err) {
+    console.error(`Failed to traverse graph from ${slug}`, err);
+    return { count: 0, results: [] };
+  }
+}

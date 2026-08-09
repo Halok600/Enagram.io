@@ -1958,3 +1958,96 @@ over a one-off in-context mention.
 live end-to-end. 6 of the 8 originally-listed bonus features are now
 shipped (#1-#6). Remaining: #7 graph-based cross-source linking, #8
 voice input — neither started. Ready to push.
+
+---
+
+## 2026-08-10 — Feature #7: graph-based cross-source linking
+
+**Context:** Last of the readily-scoped items on the 8-feature list
+before #8 (voice input, a different kind of work entirely). The idea:
+instead of the model only ever discovering cross-source connections by
+guessing new search queries per source (today's Tier 2 mechanism), give
+gbrain explicit graph edges between pages that are provably the same
+real-world thread, so the model can follow a link directly instead of
+re-searching blind.
+
+**Investigated gbrain's actual graph tool surface before designing
+anything** (`tools/list`: `add_link`/`get_links`/`get_backlinks`/
+`traverse_graph`), then read `operations.ts` directly for exact
+input/output contracts rather than guess — paid off immediately: the
+schema pack's `link_types` (gbrain-base-v2.yaml) has no cross-source-
+relationship-specific type, but `relates_to` (self-inverse, generic) is
+a clean fit. Live-tested `add_link` + `traverse_graph` against two real
+already-ingested pages (a SkillLayer Gmail thread + the take-home Drive
+doc) before writing any app code — worked cleanly and predictably on the
+first try, a welcome contrast to feature #6's `extract_facts` dead end.
+That test link is now real production data (harmless — it's a
+genuinely correct connection).
+
+**Design — what signal to link on, and why deterministic.** Every
+BrainDocument across all three sources already carries a `participants`
+list (Gmail from/to/cc, Drive owners, Calendar organizer/attendees) —
+two documents from DIFFERENT sources sharing a participant email are a
+strong, deterministic signal they're part of the same real-world thread
+(a job application, a specific person's correspondence). Deliberately
+NOT LLM-judged (no "does the model think these are related" step) —
+after feature #6's opaque-extraction detour, a plain participant-overlap
+computation is fully predictable, inspectable, and needs no gbrain-side
+LLM call at all.
+
+**Safety valves against a degenerate graph:**
+- The user's OWN email is excluded from matching — it's a participant on
+  nearly everything, so without this every document would spuriously
+  link to every other document via "shared participant: me."
+- Participants shared by more than 6 documents are dropped entirely
+  (mailing lists, frequent senders) — not a meaningful "these are the
+  same thread" signal past that point.
+- Only CROSS-source pairs link (Gmail↔Drive, Gmail↔Calendar,
+  Drive↔Calendar) — same-source pairs sharing a participant (e.g. two
+  unrelated emails from the same person) aren't the "cross-source"
+  linking this feature is named for.
+- Capped at 30 link-creation calls per sync, and the whole pass is
+  skipped entirely when `commit.committed` is false (nothing changed
+  since last sync) — auto-sync (feature #3) fires on every page load, so
+  an uncapped or always-running linking pass would add real latency to
+  what's supposed to be a quick, silent background check most of the time.
+
+**Implementation:**
+- [`gbrain-remote.ts`](src/lib/brain/gbrain-remote.ts) — `linkRelatedDocuments()`
+  (ingestion-time, called from the sync route) and `findRelated()` (the
+  model-facing read: one-hop `traverse_graph` in both directions, then
+  `get_page` per linked slug for title/url/date — same enrichment
+  pattern already used for citations).
+- [`route.ts`](src/app/api/ingest/sync/route.ts) — runs linking after a
+  successful sync with real changes, using `session.user?.email` to
+  exclude the user's own address. Response gained `linksCreated`.
+- [`tools.ts`](src/lib/query/tools.ts) — new `find_related` tool,
+  unconditional in `createBrainTools()` (no Google OAuth token needed,
+  same as the other read tools) but deliberately NOT added to the eval
+  harness's fixed tool set — none of the existing eval queries need
+  graph traversal, and adding a case that depends on a specific link
+  existing would make the suite fragile against exactly what data has
+  been ingested, unlike the keyword/not-found checks used everywhere else.
+- [`config.ts`](src/lib/query/config.ts) — new rule: after a relevant
+  search result, consider `find_related` on its slug before re-searching
+  blind; explicitly notes an empty result is normal (no link exists yet),
+  not an error, so the model doesn't treat an empty graph as a dead end.
+- UI: [`SyncButton.tsx`](src/app/SyncButton.tsx) shows the link count
+  created per sync; [`Workspace.tsx`](src/app/chat/Workspace.tsx) /
+  [`Sidebar.tsx`](src/app/chat/Sidebar.tsx) track `find_related` as an
+  active tool (`MAPPING_LINKS`, `Network` icon).
+- [`SPEC.md`](SPEC.md) — not yet updated at time of this entry; will add
+  once live-verified (matching the pattern for every feature so far).
+
+**Verified:**
+- `tsc --noEmit`, `eslint src evals`, `next build` all clean.
+- `bun run evals/run-evals.ts`: **6/6 passed**, no regressions.
+- Not yet verified live: a real sync that creates NEW links from genuine
+  ingested data (the one link in production right now was created by my
+  own manual test script, not the app's actual ingestion-time linking
+  code path), and the model actually calling `find_related` mid-
+  conversation and getting a useful result back.
+
+**Current state:** Feature #7 implemented and statically verified;
+live confirmation pending — asked the user to trigger a real re-sync and
+try a cross-source question that should benefit from graph traversal.

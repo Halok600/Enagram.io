@@ -9,7 +9,9 @@ import {
   calendarEventToBrainDocument,
 } from "@/lib/brain/normalize";
 import { writeBrainPages } from "@/lib/brain/write";
+import { brainDocumentPagePath } from "@/lib/brain/markdown";
 import { commitBrainRepo, syncBrain } from "@/lib/brain/gbrain-cli";
+import { linkRelatedDocuments } from "@/lib/brain/gbrain-remote";
 
 const DEFAULT_MAX_PER_SOURCE = 50;
 
@@ -51,12 +53,28 @@ export async function POST() {
     );
     const syncLog = await syncBrain();
 
+    // Only worth relinking when something actually changed — most auto-syncs
+    // (feature #3, fires on every page load) find nothing new, and linking
+    // is a sequential write burst against the remote server that shouldn't
+    // run on every no-op sync.
+    const linking = commit.committed
+      ? await linkRelatedDocuments(
+          docs.map((doc) => ({
+            slug: brainDocumentPagePath(doc).replace(/\.md$/, ""),
+            source: doc.source,
+            participants: doc.participants,
+          })),
+          session.user?.email ?? "",
+        )
+      : { linksCreated: 0, linksAttempted: 0 };
+
     return NextResponse.json({
       gmailCount: messages.length,
       driveCount: files.length,
       calendarCount: events.length,
       pagesWritten: paths.length,
       committed: commit.committed,
+      linksCreated: linking.linksCreated,
       syncLog,
     });
   } catch (err) {

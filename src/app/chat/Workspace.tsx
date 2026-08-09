@@ -13,6 +13,7 @@ const TOOL_TYPES = [
   "tool-draft_gmail_reply",
   "tool-save_preference",
   "tool-forget_preference",
+  "tool-find_related",
 ] as const;
 
 const TOOL_NAME_BY_PART_TYPE: Record<(typeof TOOL_TYPES)[number], string> = {
@@ -22,6 +23,7 @@ const TOOL_NAME_BY_PART_TYPE: Record<(typeof TOOL_TYPES)[number], string> = {
   "tool-draft_gmail_reply": "draft_gmail_reply",
   "tool-save_preference": "save_preference",
   "tool-forget_preference": "forget_preference",
+  "tool-find_related": "find_related",
 };
 
 /** Tool calls in-flight on the current (last) message — not yet output-available/output-error. */
