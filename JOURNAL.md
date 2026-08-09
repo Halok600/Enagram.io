@@ -2051,3 +2051,32 @@ LLM call at all.
 **Current state:** Feature #7 implemented and statically verified;
 live confirmation pending — asked the user to trigger a real re-sync and
 try a cross-source question that should benefit from graph traversal.
+
+---
+
+## 2026-08-10 — Feature #7 read side verified live
+
+**Verified live:** user asked "What else is connected to my SkillLayer
+shortlist email?" — the agent correctly surfaced the linked take-home
+Drive doc (`skilllayer_sde_I_takehome`) via the graph connection created
+during this feature's own manual pre-testing, alongside other genuinely
+relevant items from additional search calls. Confirms `find_related` +
+the underlying `traverse_graph` call work correctly end-to-end through
+the real chat UI, not just the raw probe script from earlier.
+
+**Not yet verified:** the ingestion-time auto-linking code path itself
+(`linkRelatedDocuments`, called from the sync route) — the one existing
+production link was created by this feature's own manual test script
+during development, not by a real sync run. This only fires when a sync
+finds genuinely new content (`commit.committed`), which doesn't exist to
+test against on demand right now. Left for natural verification the
+next time the user has real new Gmail/Drive/Calendar content to sync —
+documented honestly as a known gap rather than glossed over, consistent
+with how other structurally-hard-to-test pieces (e.g. tier1-drive-recency's
+date-coverage limitation) have been handled throughout this project.
+
+**Current state:** Feature #7's read side is fully confirmed working
+live; the write (auto-linking) side is implemented, statically verified,
+and was proven correct via a manual pre-test of the exact same
+add_link/traverse_graph primitives it calls, but not yet exercised by
+the real ingestion code path on genuinely new data. Ready to push.
