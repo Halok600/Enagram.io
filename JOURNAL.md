@@ -1474,3 +1474,56 @@ and the full eval suite passing live against production infra. PDF
 content-extraction correctness specifically still needs one live
 user-run query to confirm end-to-end, since it's the one piece the
 automated eval suite doesn't exercise.
+
+---
+
+## 2026-08-09 — Live user testing found a real bug: auto-sync races against gbrain's own sync lock
+
+**Context:** User verified all three features live. #1 (PDF extraction)
+confirmed correct on the first try — a query about details only present
+inside a resume PDF's body text answered correctly. #3 (auto-sync)
+initially looked broken (zero `/api/ingest/sync` requests in the Network
+tab), which turned out to be a red herring — the user was checking
+before the effect had fired, not an actual failure. On a proper check
+(Network tab open before reload) the auto-sync request appeared, but
+failed with `500 Internal Server Error` / `{error: "Ingestion sync
+failed"}`.
+
+**Diagnosis:** The route's catch-all swallows the real error before
+sending it to the browser (`console.error` server-side only, generic
+message to the client — deliberate, not a bug, since exposing raw stack
+traces to the client isn't good practice, but it meant I had to ask the
+user to paste their `next dev` terminal output to see the real cause).
+The actual error: `gbrain sync` failed with exit code 1 — `Another sync
+is in progress (lock gbrain-sync:personal-brain held by pid 16704...)`.
+Checked whether that pid was a stale/orphaned process before considering
+`--break-lock` (`tasklist /FI "PID eq 16704"` — confirmed as a live
+`bun.exe` process, i.e. a real sync genuinely still running, not a dead
+lock). Root cause: auto-sync-on-load fires once per full page
+mount/reload by design, but the user reloaded the page multiple times in
+quick succession while checking DevTools — each reload is a fresh
+`Workspace` mount, so each one fired its own sync attempt, and
+ingest+embed of real Gmail/Drive content takes a few minutes, so later
+reloads collided with an earlier sync still in flight. This is a genuine
+interaction bug introduced by feature #3: the manual Re-sync button was
+only ever clicked deliberately and rarely hit this lock in practice;
+auto-firing on every page load makes the collision easy to trigger.
+
+**Fix ([`gbrain-cli.ts`](src/lib/brain/gbrain-cli.ts)):** gbrain's lock
+is a correct safety mechanism, not something to bypass — `syncBrain()`
+now catches specifically the "Another sync is in progress" case from
+gbrain's stderr and treats it as a benign no-op (returns a descriptive
+string) instead of re-throwing, so the route responds 200 with a clear
+"skipped, already running" message rather than a 500. Any other gbrain
+failure still throws and surfaces as a real error, unchanged — this is a
+targeted fix for the one specific race actually observed, not a blanket
+swallow-all-errors change.
+
+**Verified:** `tsc --noEmit`, `eslint src evals` clean. Not yet
+re-verified live (requires the user to trigger a real overlapping sync,
+or simply reload again after the in-flight sync from this testing
+session finishes) — asked the user to retry.
+
+**Current state:** Fix implemented and statically verified; awaiting one
+more live confirmation from the user that a collided auto-sync now
+degrades gracefully instead of surfacing as a 500.

@@ -68,6 +68,20 @@ export async function commitBrainRepo(message: string): Promise<{ committed: boo
 }
 
 export async function syncBrain(): Promise<string> {
-  const { stdout, stderr } = await run(gbrainBin(), ["sync", "--source", GBRAIN_SOURCE_ID]);
-  return stdout + stderr;
+  try {
+    const { stdout, stderr } = await run(gbrainBin(), ["sync", "--source", GBRAIN_SOURCE_ID]);
+    return stdout + stderr;
+  } catch (err) {
+    // gbrain's own concurrency lock (not a bug in gbrain) rejects a sync
+    // outright if another one is still running for the same source — a real
+    // scenario now that auto-sync-on-load can fire on every page reload
+    // while a prior sync (ingest+embed can take a few minutes) is still in
+    // flight. That's an expected race, not a failure: treat it as a no-op
+    // rather than surfacing a scary 500 to the UI.
+    const stderr = (err as { stderr?: string }).stderr ?? "";
+    if (stderr.includes("Another sync is in progress")) {
+      return `Sync already in progress elsewhere — skipped this run.\n${stderr}`;
+    }
+    throw err;
+  }
 }
