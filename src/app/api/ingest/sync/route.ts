@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { listRecentMessages } from "@/lib/google/gmail";
 import { listRecentFiles } from "@/lib/google/drive";
-import { gmailMessageToBrainDocument, driveFileToBrainDocument } from "@/lib/brain/normalize";
+import { listEvents } from "@/lib/google/calendar";
+import {
+  gmailMessageToBrainDocument,
+  driveFileToBrainDocument,
+  calendarEventToBrainDocument,
+} from "@/lib/brain/normalize";
 import { writeBrainPages } from "@/lib/brain/write";
 import { commitBrainRepo, syncBrain } from "@/lib/brain/gbrain-cli";
 
@@ -28,25 +33,28 @@ export async function POST() {
   }
 
   try {
-    const [messages, files] = await Promise.all([
+    const [messages, files, events] = await Promise.all([
       listRecentMessages(session.accessToken, DEFAULT_MAX_PER_SOURCE),
       listRecentFiles(session.accessToken, DEFAULT_MAX_PER_SOURCE),
+      listEvents(session.accessToken),
     ]);
 
     const docs = [
       ...messages.map(gmailMessageToBrainDocument),
       ...files.map(driveFileToBrainDocument),
+      ...events.map(calendarEventToBrainDocument),
     ];
 
     const paths = await writeBrainPages(docs);
     const commit = await commitBrainRepo(
-      `ingest: ${messages.length} gmail message(s), ${files.length} drive file(s)`,
+      `ingest: ${messages.length} gmail message(s), ${files.length} drive file(s), ${events.length} calendar event(s)`,
     );
     const syncLog = await syncBrain();
 
     return NextResponse.json({
       gmailCount: messages.length,
       driveCount: files.length,
+      calendarCount: events.length,
       pagesWritten: paths.length,
       committed: commit.committed,
       syncLog,

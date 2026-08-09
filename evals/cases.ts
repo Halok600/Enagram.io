@@ -102,6 +102,20 @@ export const EVAL_CASES: EvalCase[] = [
     },
   },
   {
+    id: "tier1-calendar-not-found",
+    tier: "tier1",
+    query: "Do I have any calendar event about a team offsite in Antarctica?",
+    description:
+      "Feature #5 (Calendar connector, added 2026-08-09). Grounding check for the new search_calendar tool, " +
+      "mirroring the existing not_found pattern (tier1-stripe-not-found) — deliberately implausible content so " +
+      "the case stays reliable regardless of what's actually on the connected calendar. A deeper Tier2 case " +
+      "joining Calendar with Gmail/Drive was intentionally NOT added: it would require guessing real calendar " +
+      "content this harness has no way to verify ground truth for, unlike the SkillLayer case which is grounded " +
+      "in emails already quoted elsewhere in this file.",
+    expectedTools: ["search_calendar"],
+    expectation: { type: "not_found" },
+  },
+  {
     id: "tier2-priya-contract-not-found",
     tier: "tier2",
     query: "Did I ever send Priya a contract draft, and did she reply?",

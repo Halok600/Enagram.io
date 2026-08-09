@@ -1,6 +1,6 @@
 import { tool } from "ai";
 import { z } from "zod";
-import { searchGmail, searchDrive } from "@/lib/brain/gbrain-remote";
+import { searchGmail, searchDrive, searchCalendar } from "@/lib/brain/gbrain-remote";
 import { createDraftReply } from "@/lib/google/gmail";
 
 /**
@@ -58,6 +58,18 @@ export const searchDriveTool = tool({
   execute: async ({ query, limit }) => formatHits(await searchDrive(query, limit)),
 });
 
+export const searchCalendarTool = tool({
+  description:
+    "Search the user's Google Calendar (already ingested into the brain) for events matching a query. " +
+    "Use natural-language or keyword queries, e.g. 'meeting with Nirmit', 'interview'. Covers roughly " +
+    "the past month through the next 3 months of events.",
+  inputSchema: z.object({
+    query: z.string().describe("What to search for in the user's calendar events"),
+    limit: z.number().int().min(1).max(20).default(8),
+  }),
+  execute: async ({ query, limit }) => formatHits(await searchCalendar(query, limit)),
+});
+
 function createDraftGmailReplyTool(accessToken: string) {
   return tool({
     description:
@@ -92,11 +104,13 @@ function createDraftGmailReplyTool(accessToken: string) {
 export function createBrainTools(accessToken?: string): {
   search_gmail: typeof searchGmailTool;
   search_drive: typeof searchDriveTool;
+  search_calendar: typeof searchCalendarTool;
   draft_gmail_reply?: ReturnType<typeof createDraftGmailReplyTool>;
 } {
   return {
     search_gmail: searchGmailTool,
     search_drive: searchDriveTool,
+    search_calendar: searchCalendarTool,
     ...(accessToken ? { draft_gmail_reply: createDraftGmailReplyTool(accessToken) } : {}),
   };
 }

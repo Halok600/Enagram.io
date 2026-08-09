@@ -6,11 +6,17 @@ import { DefaultChatTransport, type UIMessage } from "ai";
 import { Sidebar } from "./Sidebar";
 import { Chat } from "./Chat";
 
-const TOOL_TYPES = ["tool-search_gmail", "tool-search_drive", "tool-draft_gmail_reply"] as const;
+const TOOL_TYPES = [
+  "tool-search_gmail",
+  "tool-search_drive",
+  "tool-search_calendar",
+  "tool-draft_gmail_reply",
+] as const;
 
 const TOOL_NAME_BY_PART_TYPE: Record<(typeof TOOL_TYPES)[number], string> = {
   "tool-search_gmail": "search_gmail",
   "tool-search_drive": "search_drive",
+  "tool-search_calendar": "search_calendar",
   "tool-draft_gmail_reply": "draft_gmail_reply",
 };
 

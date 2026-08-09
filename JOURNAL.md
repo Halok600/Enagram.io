@@ -1664,3 +1664,105 @@ live end-to-end — real Gmail draft created and correctly threaded,
 failure mode (stale scope) degrades honestly instead of silently, and
 the recipient-selection logic verified correct on a real multi-participant
 thread. Ready to push.
+
+---
+
+## 2026-08-09 — Feature #5: Google Calendar connector (third data source)
+
+**Context:** Next pick off the 8-feature list, using the Aug 18 deadline
+extension: add Google Calendar as a third connector, read-only (unlike
+#4's narrow write exception). Mirrors the existing Gmail/Drive connector
+shape end to end: API client → normalize → gbrain page type → search
+tool → system prompt → UI status/activity indicators → eval case.
+
+**Design decision — which gbrain page type to use.** gbrain-base-v2 (the
+schema pack this brain runs on) has no dedicated "calendar event" type,
+same situation Drive hit on 2026-08-04 (worked around by reusing
+`source`). Read the schema pack directly
+(`gbrain-base-v2.yaml` in the cached install, via `C:\Users\lenovo\.bun\install\cache\...`)
+rather than guess: it has an `event` type (`primitive: temporal`, path
+prefix `life/events/`) — its own comment frames it as "Life Chronicle"
+personal-timeline/diary events (#2390), not calendar meetings
+specifically, but `primitive: temporal` and the literal name make it the
+closest available fit, same reasoning as the Drive/`source` precedent.
+Used it — [`markdown.ts`](src/lib/brain/markdown.ts)'s `TYPE_BY_SOURCE`
+now writes calendar pages to `life/events/` with `type: event`.
+
+**Design decision — ingestion window.** Gmail/Drive ingest "most recent N
+items" (a count), which doesn't fit Calendar: a query like "what did I
+have last week" needs past events, "what's my next meeting" needs future
+ones, and neither is about recency-of-modification the way an email or
+file is. [`calendar.ts`](src/lib/google/calendar.ts)'s `listEvents`
+windows by time instead — 30 days back through 90 days forward —
+`singleEvents: true` expands recurring events into individual instances
+so each occurrence is independently searchable, and cancelled instances
+are filtered out as ingestion noise.
+
+**Implementation:**
+- [`calendar.ts`](src/lib/google/calendar.ts) (new) — `listEvents`,
+  mirroring gmail.ts/drive.ts's client shape.
+- [`normalize.ts`](src/lib/brain/normalize.ts) — `calendarEventToBrainDocument`.
+  Restates when/where/what directly into the page body (not just
+  frontmatter) for the same reason participants are restated for Gmail
+  (2026-08-04 entry): gbrain's search only ever returns indexed body
+  text to callers, never frontmatter, so anything the model needs to see
+  or the index needs to match on has to actually be visible body text.
+  `timestamp` = the event's start time (when it happens), not
+  created/modified time — the semantically correct anchor for a calendar
+  item.
+- [`types.ts`](src/lib/brain/types.ts) — `BrainDocument.source` gained
+  `"calendar"`.
+- [`gbrain-remote.ts`](src/lib/brain/gbrain-remote.ts) — `searchBrain`'s
+  type filter gained `"event"`; added `searchCalendar`.
+- [`tools.ts`](src/lib/query/tools.ts) — new `search_calendar` tool,
+  same shape as the other two search tools (reuses `formatHits`
+  unchanged — the gmail-only `threadId` extraction already no-ops safely
+  for non-Gmail urls, confirmed no special-casing needed).
+- [`auth.ts`](src/auth.ts) — added `calendar.readonly` scope (a third
+  scope alongside the #4 addition of `gmail.compose` — existing sessions
+  need to re-consent again to pick this one up too, and it will likely
+  also need adding to the Google Cloud OAuth consent screen's scope list
+  in Testing mode, same requirement the original Gmail/Drive scopes had).
+- [`route.ts`](src/app/api/ingest/sync/route.ts) — fetches events
+  alongside messages/files during sync; response gained `calendarCount`.
+- [`config.ts`](src/lib/query/config.ts) — system prompt now names all
+  three tools, widened the "some questions need more than one tool" rule
+  to a three-way example (Calendar + Gmail), and added a freshness-rule
+  carve-out: a past calendar event isn't "stale information" the way an
+  old email/doc might be — it's just a completed event — so the
+  freshness caveat shouldn't misfire on it the way it correctly does for
+  Gmail/Drive.
+- UI: [`Workspace.tsx`](src/app/chat/Workspace.tsx) tracks
+  `tool-search_calendar` for the live-activity indicator;
+  [`Sidebar.tsx`](src/app/chat/Sidebar.tsx) gets a `CALENDAR` status row
+  and a `SEARCH_CALENDAR` / `CalendarDays` active-tool entry;
+  [`SyncButton.tsx`](src/app/SyncButton.tsx) shows the calendar count
+  alongside gmail/drive counts and relabels to "RE-SYNC ALL SOURCES."
+- [`SPEC.md`](SPEC.md) §2 — documented as a deliberate scope addition
+  (originally "two connectors," extended deadline funded a third),
+  including the type-mapping rationale.
+- [`evals/cases.ts`](evals/cases.ts) — new `tier1-calendar-not-found`
+  case, deliberately implausible content (mirrors the existing
+  Stripe/Priya not-found pattern) so it stays reliable without needing
+  to know real calendar ground truth. Documented in-file why a deeper
+  Tier2 calendar+Gmail/Drive case was deliberately NOT added: unlike the
+  SkillLayer case (grounded in emails already quoted elsewhere in the
+  file), there's no way to verify real calendar content from here.
+  [`run-evals.ts`](evals/run-evals.ts) updated to include
+  `search_calendar` in its tool set.
+
+**Verified:**
+- `tsc --noEmit`, `eslint src evals`, `next build` all clean.
+- `bun run evals/run-evals.ts`: **6/6 passed** (5 existing + the new
+  calendar case), no regressions.
+- The calendar eval case only proves the tool is correctly wired end to
+  end (search_calendar called, empty result correctly reported as not
+  found) — it does NOT yet prove real calendar event content is
+  searchable, since no calendar data has been ingested yet (requires a
+  re-sync with the new `calendar.readonly` scope granted first). Flagged
+  to the user as the next live check needed, same pattern as #1's PDF
+  extraction needing a dedicated content-based query to confirm.
+
+**Current state:** Calendar connector implemented and statically
+verified end to end; live confirmation pending the user's re-consent
+(new scope) and a re-sync, then a real calendar-content query.

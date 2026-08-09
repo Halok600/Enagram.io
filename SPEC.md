@@ -14,8 +14,17 @@ grounded, conversational answers.
 ## 2. Scope
 
 ### In scope
-- Two connectors: **Gmail** and **Google Drive** (same OAuth consent screen,
-  same Google API surface — lowest auth overhead for a 6-day solo build).
+- **Gmail** and **Google Drive** (same OAuth consent screen, same Google
+  API surface — lowest auth overhead for a 6-day solo build). The
+  assignment requires "at least two" — this satisfies it standalone.
+- **Google Calendar** — **added 2026-08-09** (deadline extended to Aug 18,
+  used the room for a third connector, same OAuth consent screen and
+  Google API family as the other two, so still low marginal auth
+  overhead). Read-only (`calendar.readonly`), same as Gmail/Drive.
+  Ingested as gbrain's `event` type (closest available fit in
+  gbrain-base-v2 — see markdown.ts) via a 30-days-back/90-days-forward
+  window (events don't have a natural "most recent N" the way
+  emails/files do).
 - Ingestion pipeline that pulls data from both into local storage backed by
   **gbrain** (https://github.com/garrytan/gbrain).
 - A retrieval + reasoning layer that can answer:

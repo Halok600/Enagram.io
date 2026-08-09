@@ -1,6 +1,6 @@
-# Eval run — 2026-08-09T17:39:52.169Z
+# Eval run — 2026-08-09T18:04:56.691Z
 
-Model: `gemini-flash-lite-latest` · Cases: 5 · Passed: 5/5
+Model: `gemini-flash-lite-latest` · Cases: 6 · Passed: 6/6
 
 ## PASS — tier1-stripe-not-found (tier1)
 
@@ -14,9 +14,9 @@ Model: `gemini-flash-lite-latest` · Cases: 5 · Passed: 5/5
 
 **Answer:**
 
-> I couldn't find an email from Stripe about a failed payment in your connected Gmail data.
+> I couldn't find any email from Stripe about a failed payment in your connected Gmail account.
 
-_72.8s_
+_62.3s_
 
 ---
 
@@ -32,12 +32,13 @@ _72.8s_
 
 **Answer:**
 
-> I couldn't find any Drive files edited or shared in the last week. The most recent files I see in your connected Drive are from February and March 2026:
+> I searched your connected Google Drive files, but I couldn't find any files edited or shared in the last week (today is August 9, 2026). 
 > 
-> * [httpsgithub.comHalok600Reddit-insig.txt](https://drive.google.com/file/d/1pzBwEWBrYdwtEhdRskBvGwQgbGSrxvZN/view?usp=drivesdk) (March 9, 2026)
-> * [Resume_2026_Feb.pdf](https://drive.google.com/file/d/1gN8DWfA6BZD-LOCtd9p1VPvWqCfRLcdX/view?usp=drivesdk) (February 24, 2026)
+> The most recent files in your Drive are from earlier this year:
+> * **[httpsgithub.comHalok600Reddit-insig.txt](https://drive.google.com/file/d/1pzBwEWBrYdwtEhdRskBvGwQgbGSrxvzn/view?usp=drivesdk)** (March 9, 2026)
+> * **[Resume_2026_Feb.pdf](https://drive.google.com/file/d/1gN8DWfA6BZD-LOCtd9p1VPvWqCfRLcdX/view?usp=drivesdk)** (February 24, 2026)
 
-_19.4s_
+_10.0s_
 
 ---
 
@@ -53,16 +54,14 @@ _19.4s_
 
 **Answer:**
 
-> Based on your emails, your most recent email thread with Nirmit from SkillLayer is about your selection and next steps for the Software Development Engineer I role:
+> Your most recent email thread with Nirmit from SkillLayer is titled **[Fwd: Take Home Assignment for selected folks](https://mail.google.com/mail/u/0/#all/19fc149dba64bd06)** (forwarded on August 2, 2026). 
 > 
-> * **Subject:** [Fwd: Take Home Assignment for selected folks](https://mail.google.com/mail/u/0/#all/19fc149dba64bd06) (forwarded on August 2, 2026, originally sent by Nirmit on August 1, 2026).
-> * **Key Details:**
->   * Nirmit congratulated candidates on being shortlisted for the **MC Round** of the recruitment process.
->   * The email shares the [Take Home Assignment Google Doc](https://docs.google.com/document/d/137QC0GmLIakjGt0jV6tlSSUVmnarqjZny34E0YR0vCA/edit?usp=sharing) for Round 1.
->   * Candidates are instructed to carefully review the guidelines and complete the assignment within the timeline specified in the document.
->   * Nirmit also noted that **Round 2** will be an F2F online interview.
+> Here is a summary of the details:
+> * **Shortlisting:** Nirmit and Cristian from SkillLayer notified selected candidates that they have been shortlisted for the **MC Round** of the recruitment process.
+> * **Take-Home Assignment:** Candidates were provided with the [skilllayer_sde_I_takehome](https://docs.google.com/document/d/137QC0GmLIakjGt0jV6tlSSUVmnarqjZny34E0YR0vCA/edit?usp=sharing) document to complete Round 1. 
+> * **Next Steps:** The assignment must be completed within the timeline specified in the document, and successful candidates will move on to **Round 2**, which will be an F2F online interview.
 
-_23.1s_
+_10.2s_
 
 ---
 
@@ -78,14 +77,35 @@ _23.1s_
 
 **Answer:**
 
-> Your application for the **Software Development Engineer I** role at **SkillLayer** has progressed to the **MC Round**, and you have officially been shortlisted for the take-home assignment phase [SHORTLISTED STUDENTS](https://mail.google.com/mail/u/0/#all/19fc76dd1908a913). 
+> You have been shortlisted for the **MC Round** of the **Software Development Engineer I** position at SkillLayer [SHORTLISTED STUDENTS](https://mail.google.com/mail/u/0/#all/19fc76dd1908a913). 
 > 
-> Yes, the take-home assignment document is available in your Google Drive and was shared with you via email:
-> * **Assignment Document:** [skilllayer_sde_I_takehome](https://docs.google.com/document/d/137QC0GmLIakjGt0jV6tlSSUVmnarqjZny34E0YR0vCA/edit?usp=drivesdk) (also referenced in the [notification email](https://mail.google.com/mail/u/0/#all/19fdc9cd0ba7c0ea)).
-> * **Task Summary:** You are asked to build a "Personal Brain" conversational agent that queries data across at least two connected personal tools (like Gmail and Drive) using Spec-Driven Development.
-> * **Deadline:** The assignment needs to be submitted by replying to the original application email thread to `nirmit@skilllayer.tech` (CCing `cristian@skilllayer.tech`).
+> Yes, the take-home assignment document is in your Drive:
+> * **[skilllayer_sde_I_takehome](https://docs.google.com/document/d/137QC0GmLIakjGt0jV6tlSSUVmnarqjZny34E0YR0vCA/edit?usp=drivesdk)** [Document shared with you: "skilllayer_sde_I_takehome"](https://mail.google.com/mail/u/0/#all/19fdc9cd0ba7c0ea)
+> 
+> **Assignment Details:**
+> * **Task:** Build a "Personal Brain" conversational agent over your own data that uses at least two connected tools and reasons across them.
+> * **Deadline:** August 17, 2026 at 12:00 PM (updated from August 10) [skilllayer_sde_I_takehome](https://docs.google.com/document/d/137QC0GmLIakjGt0jV6tlSSUVmnarqjZny34E0YR0vCA/edit?usp=drivesdk).
+> * **Submission:** Submit your link or demo video by replying to the application email thread (`nirmit@skilllayer.tech` with `cristian@skilllayer.tech` on CC) [skilllayer_sde_I_takehome](https://docs.google.com/document/d/137QC0GmLIakjGt0jV6tlSSUVmnarqjZny34E0YR0vCA/edit?usp=drivesdk).
 
-_23.1s_
+_11.5s_
+
+---
+
+## PASS — tier1-calendar-not-found (tier1)
+
+**Query:** Do I have any calendar event about a team offsite in Antarctica?
+
+**Checks:** Feature #5 (Calendar connector, added 2026-08-09). Grounding check for the new search_calendar tool, mirroring the existing not_found pattern (tier1-stripe-not-found) — deliberately implausible content so the case stays reliable regardless of what's actually on the connected calendar. A deeper Tier2 case joining Calendar with Gmail/Drive was intentionally NOT added: it would require guessing real calendar content this harness has no way to verify ground truth for, unlike the SkillLayer case which is grounded in emails already quoted elsewhere in this file.
+
+**Tools used:** search_calendar — expected [search_calendar] — OK
+
+**Content check:** OK
+
+**Answer:**
+
+> I couldn't find any calendar events about a team offsite in Antarctica in your connected calendar.
+
+_20.6s_
 
 ---
 
@@ -101,10 +121,8 @@ _23.1s_
 
 **Answer:**
 
-> I couldn't find any record in your connected Gmail or Google Drive of sending a contract draft to Priya (or receiving a reply from her). 
-> 
-> The only references found related to Priya or contracts are from your take-home assignment description in [skilllayer_sde_I_takehome](https://docs.google.com/document/d/137QC0GmLIakjGt0jV6tlSSUVmnarqjZny34E0YR0vca/edit?usp=drivesdk), which uses that exact question as an example query for cross-source reasoning.
+> I couldn't find any record in your connected Gmail messages or Google Drive files of you sending a contract draft to Priya, nor of any reply from her.
 
-_38.5s_
+_37.8s_
 
 ---

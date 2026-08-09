@@ -1,10 +1,18 @@
 import { stringify } from "yaml";
 import type { BrainDocument } from "./types";
 
-/** gbrain-base-v2 path prefixes: "email" -> emails/, "source" (generic doc) -> sources/. */
+/**
+ * gbrain-base-v2 path prefixes: "email" -> emails/, "source" (generic doc)
+ * -> sources/, "event" -> life/events/ (only prefix the schema declares for
+ * it — its own comment frames it as "Life Chronicle" personal-timeline
+ * events, but primitive: temporal and the literal name "event" make it the
+ * closest available fit for calendar events, same reasoning as reusing
+ * "source" for Drive files — see JOURNAL.md 2026-08-04/2026-08-09).
+ */
 const TYPE_BY_SOURCE: Record<BrainDocument["source"], { type: string; dir: string }> = {
   gmail: { type: "email", dir: "emails" },
   drive: { type: "source", dir: "sources" },
+  calendar: { type: "event", dir: "life/events" },
 };
 
 /** Filesystem/slug-safe id: "gmail:19fc76dd1908a913" -> "gmail-19fc76dd1908a913". */

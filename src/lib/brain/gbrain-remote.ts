@@ -88,7 +88,7 @@ async function getPageMeta(slug: string): Promise<{ url?: string; date?: string 
  */
 export async function searchBrain(
   query: string,
-  options: { limit?: number; type?: "email" | "source" } = {},
+  options: { limit?: number; type?: "email" | "source" | "event" } = {},
 ): Promise<BrainSearchHit[]> {
   const { limit = 10, type } = options;
   const overFetchLimit = type ? Math.max(limit * 4, 20) : limit;
@@ -125,3 +125,4 @@ export async function searchBrain(
 
 export const searchGmail = (query: string, limit = 10) => searchBrain(query, { limit, type: "email" });
 export const searchDrive = (query: string, limit = 10) => searchBrain(query, { limit, type: "source" });
+export const searchCalendar = (query: string, limit = 10) => searchBrain(query, { limit, type: "event" });

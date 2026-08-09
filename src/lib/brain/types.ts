@@ -1,6 +1,6 @@
 export type BrainDocument = {
   id: string; // source-prefixed unique id, e.g. "gmail:<messageId>"
-  source: "gmail" | "drive";
+  source: "gmail" | "drive" | "calendar";
   title: string; // subject line / file name
   body: string; // email plaintext body / extracted doc text
   participants: string[]; // email addresses involved (to/from/cc/owners), for cross-source joins

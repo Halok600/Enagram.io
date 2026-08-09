@@ -16,7 +16,7 @@ import { google } from "@ai-sdk/google";
 import { generateText, stepCountIs } from "ai";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
-import { searchGmailTool, searchDriveTool } from "@/lib/query/tools";
+import { searchGmailTool, searchDriveTool, searchCalendarTool } from "@/lib/query/tools";
 import { CHAT_MODEL_ID, getSystemPrompt } from "@/lib/query/config";
 import { EVAL_CASES, type EvalCase } from "./cases";
 
@@ -44,7 +44,11 @@ async function runCase(evalCase: EvalCase): Promise<CaseResult> {
       // real user session to draft against, and should never even carry
       // the possibility of creating a live Gmail draft as a side effect.
       prompt: evalCase.query,
-      tools: { search_gmail: searchGmailTool, search_drive: searchDriveTool },
+      tools: {
+        search_gmail: searchGmailTool,
+        search_drive: searchDriveTool,
+        search_calendar: searchCalendarTool,
+      },
       stopWhen: stepCountIs(5),
     });
 
