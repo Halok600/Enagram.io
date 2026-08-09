@@ -1766,3 +1766,47 @@ are filtered out as ingestion noise.
 **Current state:** Calendar connector implemented and statically
 verified end to end; live confirmation pending the user's re-consent
 (new scope) and a re-sync, then a real calendar-content query.
+
+---
+
+## 2026-08-10 — Feature #5 verified live end-to-end (with a real setup gap found and fixed)
+
+**Bug hit and fixed — Calendar API wasn't enabled on the Google Cloud
+project.** First live sync attempt failed: `403 Request had insufficient
+authentication scopes` (visible in the `next dev` terminal, same
+diagnostic pattern as the earlier gbrain-lock bug — asked the user to
+paste the real server-side error rather than guess from the generic
+"Ingestion sync failed" message). Initially suspected a stale session
+(same class of issue #4 hit), but the user had already re-consented. Real
+root cause, found by checking Google Cloud Console together: unlike
+Gmail/Drive (enabled back on 2026-08-03/04), the **Google Calendar API
+itself was never enabled** for this Cloud project — a separate step from
+both OAuth scope configuration and consent-screen setup, and one I
+missed calling out when building this feature (only flagged the
+scope/re-consent side, not API enablement). User also checked the OAuth
+consent screen's configured Scopes list as a first troubleshooting step;
+turned out to be a red herring — it only listed default
+BigQuery/Cloud-Platform/devstorage scopes, not even Gmail/Drive/Compose
+despite those already working, confirming that list isn't the actual
+gate for a Testing-mode app's scope requests. Fixed by the user enabling
+"Google Calendar API" in APIs & Services → Library, then reconnecting
+again for a fresh token.
+
+**Verified live end-to-end:** after the API was enabled, sync correctly
+returned `1 event(s)` once the user added a real test event
+("Project Submission Skill Layer," Aug 17 2026, 12:30-1:30 PM) to their
+connected Google Calendar. First query attempt ("do I have anything on
+my calendar about SkillLayer?") answered "not found" — turned out to be
+a genuine race (the query landed before that particular sync round had
+actually finished committing), not a search bug; re-asking the identical
+question immediately after confirmed sync completion correctly found
+and cited the event with date and time. Confirms the full pipeline:
+Calendar API → normalize → gbrain `event` type → search_calendar → cited
+answer, all working with real data.
+
+**Current state:** Feature #5 fully implemented and confirmed working
+live end-to-end. 5 of the 8 originally-listed bonus features are now
+shipped and verified (#1 PDF extraction, #2 freshness callouts, #3
+auto-sync, #4 draft-only Gmail replies, #5 Calendar connector).
+Remaining: #6 preference memory, #7 graph-based cross-source linking,
+#8 voice input — none started. Ready to push.
