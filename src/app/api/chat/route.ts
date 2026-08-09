@@ -10,6 +10,7 @@ import {
 import { auth } from "@/auth";
 import { createBrainTools } from "@/lib/query/tools";
 import { CHAT_MODEL_ID, getSystemPrompt } from "@/lib/query/config";
+import { getPreferences } from "@/lib/brain/gbrain-remote";
 
 // 60s is the max Vercel's Hobby plan allows. Needed as headroom: the model
 // can call search_gmail/search_drive multiple times per turn, each one a
@@ -55,10 +56,11 @@ export async function POST(req: Request) {
     }
 
     const { messages }: { messages: UIMessage[] } = await req.json();
+    const preferences = await getPreferences();
 
     const result = streamText({
       model: google(CHAT_MODEL_ID),
-      system: getSystemPrompt(),
+      system: getSystemPrompt(preferences),
       messages: await convertToModelMessages(messages),
       tools: createBrainTools(session.accessToken),
       stopWhen: stepCountIs(5),

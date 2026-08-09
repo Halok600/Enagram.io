@@ -11,6 +11,8 @@ const TOOL_TYPES = [
   "tool-search_drive",
   "tool-search_calendar",
   "tool-draft_gmail_reply",
+  "tool-save_preference",
+  "tool-forget_preference",
 ] as const;
 
 const TOOL_NAME_BY_PART_TYPE: Record<(typeof TOOL_TYPES)[number], string> = {
@@ -18,6 +20,8 @@ const TOOL_NAME_BY_PART_TYPE: Record<(typeof TOOL_TYPES)[number], string> = {
   "tool-search_drive": "search_drive",
   "tool-search_calendar": "search_calendar",
   "tool-draft_gmail_reply": "draft_gmail_reply",
+  "tool-save_preference": "save_preference",
+  "tool-forget_preference": "forget_preference",
 };
 
 /** Tool calls in-flight on the current (last) message — not yet output-available/output-error. */

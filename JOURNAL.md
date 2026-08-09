@@ -1810,3 +1810,129 @@ shipped and verified (#1 PDF extraction, #2 freshness callouts, #3
 auto-sync, #4 draft-only Gmail replies, #5 Calendar connector).
 Remaining: #6 preference memory, #7 graph-based cross-source linking,
 #8 voice input — none started. Ready to push.
+
+---
+
+## 2026-08-10 — Feature #6: preference memory (with a real design pivot mid-build)
+
+**Context:** Next pick off the list: let the agent remember facts/
+preferences about the user across sessions (e.g. "remember that I prefer
+concise answers"), and have them silently inform every future
+conversation — not just something the model can search for on request.
+
+**Investigated gbrain's own native fact-memory system first, before
+building anything custom.** `tools/list` on the remote MCP server
+surfaced `extract_facts` / `recall` / `forget_fact` — "v0.31: extract
+personal-knowledge facts (events, preferences, commitments, beliefs)
+from a conversation turn into the per-source hot memory," purpose-built
+for exactly this. Read the actual source
+(`src/core/operations.ts`/`facts/*.ts` in the cached install) rather than
+guess at behavior from the tool description alone, since building UI/
+prompt work on top of a misunderstood contract would be expensive to
+unwind. Found and fixed a real blocker before even testing: `extract_facts`
+calls an internal chat model (default `anthropic:claude-sonnet-4-6`,
+`facts.extraction_model` config key) — but this project has deliberately
+carried no Anthropic key anywhere, including on the Render-hosted gbrain
+server, since the 2026-08-04 "drop Anthropic, Gemini-only" decision.
+Traced `resolveModel`'s config precedence chain (`model-config.ts`) and
+confirmed the Google chat path reads the exact same `GOOGLE_GENERATIVE_AI_API_KEY`
+already configured on Render for embeddings — so
+`gbrain config set facts.extraction_model google:gemini-flash-lite-latest`
+(run once locally against the shared Supabase DB, no Render redeploy
+needed, since facts extraction resolves config at request-time rather
+than at the embedding-dimension bootstrap point that forced the
+Render-env-var-specific fix on 2026-08-04) should cover it with zero new
+credentials.
+
+**Also found, before writing app code: remote callers can only ever
+`recall` `visibility: "world"` facts** — `recall`'s handler hardcodes
+`ctx.remote === false ? undefined : ['world']`, i.e. v0.31 ships
+world-only for remote MCP callers, all-visibility for local CLI only.
+Since every call this app makes (local dev AND Vercel) goes through the
+remote HTTP MCP path, `extract_facts` would need to be called with
+`visibility: "world"` explicitly every time, or saved facts would be
+invisible to `recall` forever — a silent, easy-to-get-wrong trap if not
+caught by reading the source first.
+
+**Live-tested `extract_facts`/`recall` directly against the remote
+server before building anything on top of them (same probe-before-build
+discipline as the original raw-HTTP-MCP work on 2026-08-04) — and hit a
+real dead end.** `extract_facts({turn_text: "The user prefers concise,
+bullet-pointed answers...", visibility: "world"})` returned a clean
+`{inserted: 0, duplicate: 0, superseded: 0, fact_ids: []}` — no error, no
+`skipped` reason (which the kill-switch/dream-generated paths both
+return explicitly when they short-circuit), just silently extracted
+nothing. Given the system is built around an entity-graph/notability-
+scored model (claims ABOUT a resolved entity, salience-weighted) rather
+than plain first-person user-preference statements, and the failure mode
+was completely opaque (a real LLM call happening inside gbrain's own
+infra that I can't inspect or debug from here), continuing down this
+path risked building a demo-critical feature on something I couldn't
+reliably verify — a bad trade for a graded live demo.
+
+**Decision: pivoted to gbrain's simpler `put_page`/`get_page` primitives
+instead** — the same tools this project already uses for citation-link
+enrichment (`getPageMeta` in gbrain-remote.ts), fully predictable and
+directly inspectable (`gbrain get notes/user-preferences`). This is also
+more architecturally consistent with a standing project decision (2026-08-03):
+"we're using gbrain only for search (retrieval)... not gbrain's built-in
+think/dream/agent commands" — reaching for `extract_facts`'s own internal
+LLM-based interpretation would have quietly broken that boundary anyway.
+Live-tested the actual round-trip before wiring up app code: `get_page`
+on a nonexistent slug returns a normal (non-error) result shaped
+`{error: "page_not_found", message, suggestion}` — NOT a thrown MCP
+error, an important and non-obvious distinction — confirmed via a direct
+probe, then `put_page` + `get_page` round-tripped a real bullet line
+through `compiled_truth` correctly.
+
+**Implementation:**
+- [`gbrain-remote.ts`](src/lib/brain/gbrain-remote.ts) — one dedicated
+  page (`notes/user-preferences`, gbrain's `note` type — the generic
+  catch-all, closest fit) holds every saved preference as a dated bullet
+  line. `getPreferences()` (read, strips the date prefix for prompt
+  injection), `savePreference()` (append, with a cheap case-insensitive
+  substring dedup check so asking to remember the same thing twice
+  doesn't duplicate it), `forgetPreference()` (substring-match removal).
+  Capped at the last 30 entries.
+- [`tools.ts`](src/lib/query/tools.ts) — new `save_preference` /
+  `forget_preference` tools, unconditionally in `createBrainTools()`
+  (unlike `draft_gmail_reply`, these don't need the user's Google OAuth
+  token at all — only the existing static `GBRAIN_REMOTE_TOKEN` already
+  used for search). Deliberately kept OUT of the eval harness's fixed
+  tool set (same precedent as `draft_gmail_reply`) so automated eval runs
+  can never write real preference data into the shared production brain
+  as a side effect.
+- [`config.ts`](src/lib/query/config.ts) — `getSystemPrompt()` gained an
+  optional `knownPreferences: string[]` parameter, injected as a
+  always-present "Known preferences/facts about the user" block — not a
+  tool the model has to remember to call, the same reasoning as why
+  freshness/today's-date is injected rather than fetched. Added rules for
+  when to call save/forget (explicit request only, never proactive from
+  casual mentions — same guardrail pattern as `draft_gmail_reply`).
+- [`route.ts`](src/app/api/chat/route.ts) — fetches `getPreferences()`
+  fresh per-request before building the prompt (same warm-Vercel-instance
+  reasoning as `today`'s date — a value fetched once and cached across
+  warm reuses would go stale after any save/forget).
+- UI: [`Workspace.tsx`](src/app/chat/Workspace.tsx) tracks the two new
+  tool-part types; [`Sidebar.tsx`](src/app/chat/Sidebar.tsx) gets
+  `SAVING_MEMORY`/`FORGETTING` active-tool entries (`BookMarked`/`Eraser`
+  icons). No dedicated preferences-list UI panel — consistent with how
+  every other feature in this app surfaces results through the model's
+  own conversational reply plus the existing tool-activity indicator,
+  not a bespoke new panel per feature.
+- [`SPEC.md`](SPEC.md) §2 — documented as a scope addition, including
+  why the native fact system was tried and set aside.
+
+**Verified:**
+- `tsc --noEmit`, `eslint src evals`, `next build` all clean.
+- `bun run evals/run-evals.ts`: **6/6 passed**, no regressions (evals
+  correctly never touch the new tools).
+- Not yet verified live through the actual chat UI: a real "remember
+  that..." round trip, confirming the saved preference actually shows up
+  injected into a LATER, separate conversation turn (not just that the
+  page write succeeds) — the whole point of this feature over a one-off
+  in-context mention.
+
+**Current state:** Feature #6 implemented and statically verified;
+live confirmation pending — asked the user to test a save + a fresh
+question that should reflect it, plus a forget.

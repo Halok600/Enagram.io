@@ -126,3 +126,64 @@ export async function searchBrain(
 export const searchGmail = (query: string, limit = 10) => searchBrain(query, { limit, type: "email" });
 export const searchDrive = (query: string, limit = 10) => searchBrain(query, { limit, type: "source" });
 export const searchCalendar = (query: string, limit = 10) => searchBrain(query, { limit, type: "event" });
+
+/**
+ * Feature #6 (preference memory). One dedicated page holds every saved
+ * preference as a bullet line — deliberately NOT gbrain's own native
+ * extract_facts/recall system (its entity-graph/notability-scored pipeline,
+ * tested live, silently extracted zero facts from plain first-person
+ * preference text with no visible error — too opaque to build on reliably
+ * for a demo). put_page/get_page are the same primitives the rest of this
+ * app already uses, fully predictable and inspectable (`gbrain get
+ * notes/user-preferences`). See JOURNAL.md 2026-08-10.
+ */
+const PREFERENCES_SLUG = "notes/user-preferences";
+const MAX_PREFERENCES = 30;
+
+type PageResult = { compiled_truth?: string; error?: string };
+
+async function getPreferencesPage(): Promise<string[]> {
+  try {
+    const page = await mcpCall<PageResult>("get_page", { slug: PREFERENCES_SLUG });
+    if (page.error === "page_not_found") return [];
+    return (page.compiled_truth ?? "")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.startsWith("- "));
+  } catch (err) {
+    console.error("Failed to read preferences page", err);
+    return [];
+  }
+}
+
+function buildPreferencesPageContent(lines: string[]): string {
+  return `---\ntype: note\ntitle: User Preferences\n---\n\n${lines.slice(-MAX_PREFERENCES).join("\n")}\n`;
+}
+
+export async function getPreferences(): Promise<string[]> {
+  const lines = await getPreferencesPage();
+  return lines.map((line) => line.replace(/^- \[\d{4}-\d{2}-\d{2}\]\s*/, ""));
+}
+
+export async function savePreference(fact: string): Promise<{ status: "saved" | "already_known" }> {
+  const existing = await getPreferencesPage();
+  const normalized = fact.trim().toLowerCase();
+  if (existing.some((line) => line.toLowerCase().includes(normalized))) {
+    return { status: "already_known" };
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const updated = [...existing, `- [${today}] ${fact.trim()}`];
+  await mcpCall("put_page", { slug: PREFERENCES_SLUG, content: buildPreferencesPageContent(updated) });
+  return { status: "saved" };
+}
+
+export async function forgetPreference(fact: string): Promise<{ status: "removed" | "not_found" }> {
+  const existing = await getPreferencesPage();
+  const normalized = fact.trim().toLowerCase();
+  const remaining = existing.filter((line) => !line.toLowerCase().includes(normalized));
+  if (remaining.length === existing.length) return { status: "not_found" };
+
+  await mcpCall("put_page", { slug: PREFERENCES_SLUG, content: buildPreferencesPageContent(remaining) });
+  return { status: "removed" };
+}

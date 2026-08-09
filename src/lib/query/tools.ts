@@ -1,6 +1,6 @@
 import { tool } from "ai";
 import { z } from "zod";
-import { searchGmail, searchDrive, searchCalendar } from "@/lib/brain/gbrain-remote";
+import { searchGmail, searchDrive, searchCalendar, savePreference, forgetPreference } from "@/lib/brain/gbrain-remote";
 import { createDraftReply } from "@/lib/google/gmail";
 
 /**
@@ -70,6 +70,29 @@ export const searchCalendarTool = tool({
   execute: async ({ query, limit }) => formatHits(await searchCalendar(query, limit)),
 });
 
+export const savePreferenceTool = tool({
+  description:
+    "Save a fact or preference about the user for future conversations (persists across sessions). " +
+    "Only call this when the user explicitly asks you to remember something (e.g. 'remember that...', " +
+    "'from now on...', 'my preference is...'). Do not save facts proactively or from casual mentions.",
+  inputSchema: z.object({
+    fact: z
+      .string()
+      .describe("A clean, well-formed statement of the fact/preference to remember, written in third person"),
+  }),
+  execute: async ({ fact }) => savePreference(fact),
+});
+
+export const forgetPreferenceTool = tool({
+  description:
+    "Remove a previously saved preference/fact about the user. Only call this when the user explicitly " +
+    "asks you to forget something.",
+  inputSchema: z.object({
+    fact: z.string().describe("The preference/fact to remove — matched against saved entries by substring"),
+  }),
+  execute: async ({ fact }) => forgetPreference(fact),
+});
+
 function createDraftGmailReplyTool(accessToken: string) {
   return tool({
     description:
@@ -105,12 +128,16 @@ export function createBrainTools(accessToken?: string): {
   search_gmail: typeof searchGmailTool;
   search_drive: typeof searchDriveTool;
   search_calendar: typeof searchCalendarTool;
+  save_preference: typeof savePreferenceTool;
+  forget_preference: typeof forgetPreferenceTool;
   draft_gmail_reply?: ReturnType<typeof createDraftGmailReplyTool>;
 } {
   return {
     search_gmail: searchGmailTool,
     search_drive: searchDriveTool,
     search_calendar: searchCalendarTool,
+    save_preference: savePreferenceTool,
+    forget_preference: forgetPreferenceTool,
     ...(accessToken ? { draft_gmail_reply: createDraftGmailReplyTool(accessToken) } : {}),
   };
 }

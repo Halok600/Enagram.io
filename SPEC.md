@@ -37,6 +37,17 @@ grounded, conversational answers.
     ever send X the contract draft, and did they reply?"
 - A chat UI (Next.js web app), deployed to Vercel, with streaming responses.
 - JOURNAL.md tracking decisions, trade-offs, and prompt iteration as we build.
+- **Preference memory** — **added 2026-08-10** (deadline extended to Aug 18):
+  the agent can save a fact/preference about the user when explicitly asked
+  ("remember that...") and it persists across sessions, injected into every
+  future conversation's system prompt (not dependent on the model choosing
+  to search for it). Backed by a single dedicated gbrain page
+  (`notes/user-preferences`) via `put_page`/`get_page` — deliberately NOT
+  gbrain's own native `extract_facts`/`recall` fact-memory system, which was
+  tried first and found too opaque to build on reliably (see JOURNAL.md
+  2026-08-10). Read-only for the model beyond the two explicit tools
+  (`save_preference`/`forget_preference`) — no automatic/proactive
+  extraction from casual conversation.
 
 ### Out of scope (explicitly, to protect the timeline)
 - Multi-user auth / account management — single user (me), OAuth to my own
