@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { RotateCcw } from "lucide-react";
 
 export function SystemErrorBanner({
   message,
@@ -9,23 +10,22 @@ export function SystemErrorBanner({
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25, ease: "easeOut" }}
-      className="clip-corner-sm glow-border-pink flex max-w-[68ch] flex-col gap-3 self-start border-2 border-[var(--neon-pink)]/70 bg-[var(--bg-panel-raised)] px-6 py-4"
+      className="flex max-w-[68ch] flex-col gap-3 self-start rounded-[var(--radius-lg)] border border-[var(--danger)]/30 bg-[var(--danger-soft-bg)] px-6 py-4"
     >
-      <span className="font-mono text-sm font-bold leading-relaxed text-[var(--neon-pink)] glow-text-pink">
-        {message}
-      </span>
+      <span className="text-sm font-medium leading-relaxed text-[var(--danger)]">{message}</span>
       <motion.button
         type="button"
         onClick={onRetry}
-        whileHover={{ scale: 1.03 }}
+        whileHover={{ y: -1 }}
         whileTap={{ scale: 0.97 }}
         transition={{ duration: 0.15 }}
-        className="clip-corner-sm self-start border-2 border-[var(--neon-cyan)]/70 bg-[var(--bg-panel)] px-4 py-2 font-mono text-xs font-bold tracking-wide text-[var(--neon-cyan)] transition-shadow hover:glow-border-cyan"
+        className="inline-flex w-fit items-center gap-1.5 self-start rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--bg-panel)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)]"
       >
-        ↻ RETRY
+        <RotateCcw size={13} />
+        Retry
       </motion.button>
     </motion.div>
   );

@@ -20,13 +20,16 @@ export default async function Home() {
 function LoginScreen() {
   return (
     <div className="flex h-screen w-screen items-center justify-center bg-[var(--bg)]">
-      <main className="clip-corner glow-border-cyan flex w-full max-w-lg flex-col items-center gap-8 border-2 border-[var(--border-dim)] bg-[var(--bg-panel)] p-14 text-center">
-        <h1 className="font-mono text-4xl font-bold tracking-widest text-[var(--neon-cyan)] glow-text-cyan">
-          PERSONAL_BRAIN
+      <main
+        className="flex w-full max-w-lg flex-col items-center gap-8 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-panel)] p-14 text-center"
+        style={{ boxShadow: "var(--shadow-md)" }}
+      >
+        <h1 className="text-4xl font-bold tracking-tight text-[var(--text-primary)]">
+          Personal Brain
         </h1>
-        <p className="text-lg text-[var(--text-dim)]">
-          Connect your Google account to let the brain read your Gmail and Drive
-          (read-only).
+        <p className="text-lg text-[var(--text-secondary)]">
+          Connect your Google account to let the brain read your Gmail, Drive, and
+          Calendar (read-only).
         </p>
         <form
           action={async () => {
@@ -36,9 +39,9 @@ function LoginScreen() {
         >
           <button
             type="submit"
-            className="clip-corner-sm border-2 border-[var(--neon-pink)]/70 bg-[var(--bg-panel-raised)] px-8 py-4 font-mono text-base font-bold tracking-wide text-[var(--neon-pink)] transition-[box-shadow,transform] duration-150 hover:glow-border-pink hover:scale-[1.02] active:scale-[0.98]"
+            className="rounded-[var(--radius-md)] bg-[var(--accent-strong)] px-8 py-4 text-base font-semibold text-white transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)] active:translate-y-0 active:scale-[0.98]"
           >
-            CONNECT GOOGLE ACCOUNT
+            Connect Google Account
           </button>
         </form>
       </main>

@@ -14,6 +14,9 @@ const TOOL_TYPES = [
   "tool-save_preference",
   "tool-forget_preference",
   "tool-find_related",
+  "tool-create_calendar_event",
+  "tool-update_calendar_event",
+  "tool-delete_calendar_event",
 ] as const;
 
 const TOOL_NAME_BY_PART_TYPE: Record<(typeof TOOL_TYPES)[number], string> = {
@@ -24,6 +27,9 @@ const TOOL_NAME_BY_PART_TYPE: Record<(typeof TOOL_TYPES)[number], string> = {
   "tool-save_preference": "save_preference",
   "tool-forget_preference": "forget_preference",
   "tool-find_related": "find_related",
+  "tool-create_calendar_event": "create_calendar_event",
+  "tool-update_calendar_event": "update_calendar_event",
+  "tool-delete_calendar_event": "delete_calendar_event",
 };
 
 /** Tool calls in-flight on the current (last) message — not yet output-available/output-error. */

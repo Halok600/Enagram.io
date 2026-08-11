@@ -9,26 +9,20 @@ const markdownComponents: Components = {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="font-bold text-[var(--neon-cyan)] underline decoration-2 underline-offset-2 transition-colors hover:text-[var(--neon-yellow)] hover:glow-text-yellow"
+      className="font-medium text-[var(--accent)] underline decoration-1 underline-offset-2 transition-colors hover:text-[var(--accent-strong)]"
     >
       {children}
     </a>
   ),
-  // No glow here (unlike most accented text elsewhere): every bold term in
-  // every chat response would carry it, and answers commonly have several
-  // per message — by far the highest-frequency glow usage in real use, and
-  // the main contributor to the "too busy" feedback. See JOURNAL.md 2026-08-10.
-  strong: ({ children }) => (
-    <strong className="font-bold text-[var(--neon-pink)]">{children}</strong>
-  ),
+  strong: ({ children }) => <strong className="font-semibold text-[var(--text-primary)]">{children}</strong>,
   ul: ({ children }) => <ul className="my-2 list-none space-y-1.5 pl-0">{children}</ul>,
   li: ({ children }) => (
-    <li className="pl-5 before:mr-2 before:-ml-5 before:text-[var(--neon-cyan)] before:content-['▸']">
-      {children}
+    <li className="flex gap-2 pl-0 before:mt-2.5 before:h-1 before:w-1 before:shrink-0 before:rounded-full before:bg-[var(--text-tertiary)] before:content-['']">
+      <span>{children}</span>
     </li>
   ),
   code: ({ children }) => (
-    <code className="rounded-sm bg-[var(--bg-panel)] px-1.5 py-0.5 font-mono text-[var(--neon-yellow)]">
+    <code className="rounded-[var(--radius-sm)] bg-[var(--bg-panel-raised)] px-1.5 py-0.5 font-mono text-sm text-[var(--accent)]">
       {children}
     </code>
   ),
@@ -60,22 +54,22 @@ export function MessageBubble({
   return (
     <motion.div
       layout="position"
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.28, ease: "easeOut" }}
+      transition={{ duration: 0.25, ease: "easeOut" }}
       className={`flex max-w-[68ch] flex-col gap-1.5 ${
         isUser ? "self-end items-end" : "self-start items-start"
       }`}
     >
-      <span className="font-mono text-xs font-bold tracking-wide text-[var(--text-dim)]">
-        {isUser ? "YOU" : "BRAIN"} · {formatTime(timestamp)}
+      <span className="text-xs font-medium text-[var(--text-tertiary)]">
+        {isUser ? "You" : "Brain"} · {formatTime(timestamp)}
       </span>
 
       <div
-        className={`clip-corner-sm border-l-4 px-6 py-4 text-base leading-relaxed ${
+        className={`rounded-[var(--radius-lg)] px-6 py-4 text-base leading-relaxed ${
           isUser
-            ? "border-y-2 border-r-2 border-y-[var(--border-dim)] border-r-[var(--border-dim)] border-l-[var(--neon-yellow)] bg-[var(--bg-panel-raised)]"
-            : "border-y-2 border-r-2 border-y-[var(--border-dim)] border-r-[var(--border-dim)] border-l-[var(--neon-cyan)] bg-[var(--bg-panel)]"
+            ? "bg-[var(--accent-soft-bg)] text-[var(--text-primary)]"
+            : "border border-[var(--border)] bg-[var(--bg-panel)] text-[var(--text-primary)]"
         }`}
       >
         {text ? (
@@ -87,7 +81,7 @@ export function MessageBubble({
         ) : null}
 
         {!isUser && sources.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2 border-t-2 border-[var(--border-dim)] pt-3">
+          <div className="mt-3 flex flex-wrap gap-2 border-t border-[var(--border)] pt-3">
             {sources.map((s) => (
               <SourceChip key={s.slug} source={s} />
             ))}

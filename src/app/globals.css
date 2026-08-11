@@ -1,106 +1,79 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------------
-   Night City terminal theme — dark base (default) + a "Neo-Tokyo lab"
-   light variant, both neon-accented with glow, CRT-ish grid, cut-corner
-   "tech hardware" panels. Theme is toggled via [data-theme] on <html>
-   (see ThemeProvider.tsx) — every color below is a token so components
-   never need to know which theme is active.
+   Modern production theme — replaced the earlier "Night City" cyberpunk
+   terminal look (neon glow, scanlines, clip-path cut corners) on user
+   feedback: "make it look like a modern website... for production use."
+   Restrained neutral surfaces + a single indigo accent, soft shadows
+   instead of glow, standard rounded corners. Theme is toggled via
+   [data-theme] on <html> (see ThemeProvider.tsx) — every color below is
+   a token so components never need to know which theme is active.
+   See JOURNAL.md 2026-08-10.
 --------------------------------------------------------------------- */
 :root {
-  --bg: #0a0a0c;
-  --bg-panel: #101014;
-  --bg-panel-raised: #17171e;
-  --bg-sidebar: #0d0d11;
+  --bg: #0b0d12;
+  --bg-panel: #12141b;
+  --bg-panel-raised: #191c25;
+  --bg-sidebar: #0e1015;
 
-  /* Primary accent — headers, borders, links. */
-  --neon-cyan: #00f0ff;
-  /* Secondary accent — warnings, active status, input focus. */
-  --neon-yellow: #fcee0a;
-  /* Action accent — send button, disconnect, destructive. */
-  --neon-pink: #ff003c;
+  /* Single brand accent (indigo) — links, active state, primary actions. */
+  --accent: #818cf8;
+  --accent-strong: #6366f1;
+  --accent-soft-bg: rgba(99, 102, 241, 0.14);
 
-  --text-primary: #eafcff;
-  --text-dim: #8a97b3;
+  --text-primary: #f4f4f6;
+  --text-secondary: #a8adba;
+  --text-tertiary: #6b7080;
 
-  --border-dim: rgba(0, 240, 255, 0.22);
-  --border-glow: rgba(0, 240, 255, 0.7);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
 
-  /* Toned down 2026-08-10 (user feedback: original 3-layer/48px-spread glow
-     read as "too busy") — a subtle lit-edge accent now, not a halo. Two
-     layers instead of three, ~80% smaller max spread, lower peak opacity. */
-  --glow-cyan: 0 0 3px rgba(0, 240, 255, 0.5), 0 0 10px rgba(0, 240, 255, 0.22);
-  --glow-pink: 0 0 3px rgba(255, 0, 60, 0.5), 0 0 10px rgba(255, 0, 60, 0.22);
-  --glow-yellow: 0 0 3px rgba(252, 238, 10, 0.5), 0 0 10px rgba(252, 238, 10, 0.22);
+  --danger: #f87171;
+  --danger-soft-bg: rgba(248, 113, 113, 0.1);
+  --success: #4ade80;
 
-  /* Scanline/grid overlay tint — themed so the texture reads correctly on
-     both a near-black and a near-white base instead of just looking muddy.
-     Toned down 2026-08-10 alongside the glow, same feedback. */
-  --grid-line: rgba(0, 240, 255, 0.028);
-  --grid-line-thin: rgba(0, 240, 255, 0.012);
-  --radial-a: rgba(255, 0, 60, 0.035);
-  --radial-b: rgba(0, 240, 255, 0.035);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
   --selection-text: #ffffff;
-
-  /* Cut-corner shape used on panels/buttons/inputs for the "tech hardware" look. */
-  --clip-corner: polygon(
-    20px 0,
-    100% 0,
-    100% calc(100% - 20px),
-    calc(100% - 20px) 100%,
-    0 100%,
-    0 20px
-  );
-  --clip-corner-sm: polygon(
-    12px 0,
-    100% 0,
-    100% calc(100% - 12px),
-    calc(100% - 12px) 100%,
-    0 100%,
-    0 12px
-  );
 }
 
-/* "Neo-Tokyo / High-Tech Lab" — not a plain white screen: crisp platinum
-   background, sharp slate panels, dark cyber text, vivid electric-blue /
-   hot-magenta / acid-green accents recomputed for legibility on light. */
 :root[data-theme="light"] {
-  --bg: #f0f3f8;
-  --bg-panel: #e2e8f0;
-  --bg-panel-raised: #d3dbe6;
-  --bg-sidebar: #e9edf3;
+  --bg: #fafafa;
+  --bg-panel: #ffffff;
+  --bg-panel-raised: #f1f1f5;
+  --bg-sidebar: #f5f5f8;
 
-  --neon-cyan: #0055ff;
-  --neon-yellow: #4a9e00;
-  --neon-pink: #d6009e;
+  --accent: #6366f1;
+  --accent-strong: #4f46e5;
+  --accent-soft-bg: rgba(99, 102, 241, 0.08);
 
-  --text-primary: #0f172a;
-  --text-dim: #51617a;
+  --text-primary: #18181b;
+  --text-secondary: #52525b;
+  --text-tertiary: #8b8b96;
 
-  --border-dim: rgba(0, 85, 255, 0.32);
-  --border-glow: rgba(0, 85, 255, 0.85);
+  --border: rgba(0, 0, 0, 0.08);
+  --border-strong: rgba(0, 0, 0, 0.16);
 
-  --glow-cyan: 0 0 3px rgba(0, 85, 255, 0.4), 0 0 10px rgba(0, 85, 255, 0.18);
-  --glow-pink: 0 0 3px rgba(214, 0, 158, 0.4), 0 0 10px rgba(214, 0, 158, 0.18);
-  --glow-yellow: 0 0 3px rgba(74, 158, 0, 0.4), 0 0 10px rgba(74, 158, 0, 0.18);
+  --danger: #ef4444;
+  --danger-soft-bg: rgba(239, 68, 68, 0.08);
+  --success: #16a34a;
 
-  --grid-line: rgba(15, 23, 42, 0.028);
-  --grid-line-thin: rgba(15, 23, 42, 0.012);
-  --radial-a: rgba(214, 0, 158, 0.025);
-  --radial-b: rgba(0, 85, 255, 0.025);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
+
   --selection-text: #ffffff;
 }
 
 @theme inline {
   --color-background: var(--bg);
   --color-foreground: var(--text-primary);
-  /* Unified on one font everywhere — sidebar labels, timestamps, and chat
-     message text all render in the terminal mono font now, for a
-     consistent look (previously message text used a separate sans-serif
-     font per an earlier design pass, which read as inconsistent once both
-     were visible side by side — see JOURNAL.md 2026-08-05). */
-  --font-sans: var(--font-terminal);
-  --font-mono: var(--font-terminal);
+  --font-sans: var(--font-sans);
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 }
 
 html,
@@ -109,19 +82,18 @@ body {
 }
 
 html {
-  font-size: 18px;
+  font-size: 16px;
 }
 
 body {
   background: var(--bg);
   color: var(--text-primary);
-  font-family: var(--font-terminal), "Courier New", monospace;
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 /* Smooth theme toggle: color/background/border animate instead of
    flashing. Scoped to these properties only (not box-shadow/transform) so
-   it doesn't fight with Framer Motion's hover/tap animations or the
-   thinking-bar keyframes, which animate different properties. */
+   it doesn't fight with Framer Motion's hover/tap animations. */
 *,
 *::before,
 *::after {
@@ -131,43 +103,8 @@ body {
     color 220ms ease;
 }
 
-/* Scanlines + a faint technical grid, static (never animated — flashing/
-   scrolling backgrounds are an accessibility hazard). */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  background-image:
-    repeating-linear-gradient(
-      0deg,
-      var(--grid-line-thin) 0px,
-      var(--grid-line-thin) 1px,
-      transparent 1px,
-      transparent 3px
-    ),
-    linear-gradient(var(--grid-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
-    radial-gradient(ellipse at 15% 0%, var(--radial-a), transparent 55%),
-    radial-gradient(ellipse at 85% 100%, var(--radial-b), transparent 55%);
-  background-size:
-    auto,
-    auto,
-    48px 48px,
-    48px 48px,
-    auto,
-    auto;
-}
-
-#__next,
-body > div {
-  position: relative;
-  z-index: 1;
-}
-
 ::selection {
-  background: var(--neon-pink);
+  background: var(--accent-strong);
   color: var(--selection-text);
 }
 
@@ -179,52 +116,17 @@ body > div {
   background: var(--bg-panel);
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--border-dim);
+  background: var(--border-strong);
   border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--border-glow);
-}
-
-/* Reusable glow / cut-corner utilities — multi-layer shadows and clip-path
-   polygons get unwieldy inline across several components.
-   Declared via @utility (not plain classes) so Tailwind's variant system
-   (hover:, focus:, etc.) actually applies to them. This was a real latent
-   bug found while wiring up hover interactions: `hover:glow-border-cyan`
-   was used all over the app already, but with a plain `.glow-border-cyan`
-   class Tailwind never generates a `.hover\:glow-border-cyan:hover` rule
-   for it — confirmed empirically (compiled CSS had exactly one occurrence
-   of the class, its own base definition, no hover variant at all). Every
-   button's hover glow had been a silent no-op. See JOURNAL.md 2026-08-05. */
-@utility glow-text-cyan {
-  text-shadow: var(--glow-cyan);
-}
-@utility glow-text-pink {
-  text-shadow: var(--glow-pink);
-}
-@utility glow-text-yellow {
-  text-shadow: var(--glow-yellow);
-}
-@utility glow-border-cyan {
-  border-color: var(--border-glow);
-  box-shadow: var(--glow-cyan);
-}
-@utility glow-border-pink {
-  /* color-mix (not a hardcoded hex) so this adapts across themes instead
-     of showing the dark-mode magenta on a light-mode panel. */
-  border-color: color-mix(in srgb, var(--neon-pink) 60%, transparent);
-  box-shadow: var(--glow-pink);
-}
-@utility clip-corner {
-  clip-path: var(--clip-corner);
-}
-@utility clip-corner-sm {
-  clip-path: var(--clip-corner-sm);
+  background: var(--text-tertiary);
 }
 
 /* ---------------------------------------------------------------------
-   "Thinking" indicator — a sequential-pulse scanner bar + pulsing label,
-   replacing the old hard blink. Pure CSS keyframes, no JS animation loop.
+   "Thinking" indicator — three bouncing dots, the standard chat-app
+   "typing" pattern, replacing the earlier 5-bar terminal-EQ animation.
+   Pure CSS keyframes, no JS animation loop.
 --------------------------------------------------------------------- */
 @keyframes thinking-fade-in {
   from {
@@ -235,26 +137,15 @@ body > div {
   }
 }
 
-@keyframes thinking-bar-pulse {
+@keyframes thinking-dot-bounce {
   0%,
+  60%,
   100% {
-    transform: scaleY(0.3);
-    opacity: 0.3;
-    box-shadow: none;
+    transform: translateY(0);
+    opacity: 0.4;
   }
-  50% {
-    transform: scaleY(1);
-    opacity: 1;
-    box-shadow: var(--glow-cyan);
-  }
-}
-
-@keyframes thinking-label-pulse {
-  0%,
-  100% {
-    opacity: 0.35;
-  }
-  50% {
+  30% {
+    transform: translateY(-5px);
     opacity: 1;
   }
 }
@@ -262,31 +153,20 @@ body > div {
 .thinking-indicator {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
   height: 1.5em;
   animation: thinking-fade-in 0.3s ease-out;
 }
 
-.thinking-bars {
+.thinking-dots {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  height: 16px;
+  gap: 5px;
 }
 
-.thinking-bar {
-  width: 3px;
-  height: 16px;
-  border-radius: 1px;
-  background: var(--neon-cyan);
-  transform-origin: center;
-  animation: thinking-bar-pulse 1.2s ease-in-out infinite;
-}
-
-.thinking-label {
-  font-family: var(--font-terminal), monospace;
-  font-size: 0.7rem;
-  letter-spacing: 0.06em;
-  color: var(--neon-cyan);
-  animation: thinking-label-pulse 1.6s ease-in-out infinite;
+.thinking-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--accent);
+  animation: thinking-dot-bounce 1.2s ease-in-out infinite;
 }

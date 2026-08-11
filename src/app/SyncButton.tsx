@@ -41,25 +41,24 @@ export function SyncButton() {
         type="button"
         onClick={handleSync}
         disabled={state === "loading"}
-        whileHover={state === "loading" ? undefined : { scale: 1.02 }}
+        whileHover={state === "loading" ? undefined : { y: -1, boxShadow: "var(--shadow-md)" }}
         whileTap={state === "loading" ? undefined : { scale: 0.98 }}
         transition={{ duration: 0.15 }}
-        className="clip-corner-sm w-full border-2 border-[var(--neon-cyan)]/70 bg-[var(--bg-panel-raised)] px-4 py-3 font-mono text-sm font-bold tracking-wide text-[var(--neon-cyan)] transition-shadow hover:glow-border-cyan disabled:opacity-40 disabled:hover:shadow-none"
+        className="w-full rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--bg-panel)] px-4 py-3 text-sm font-medium text-[var(--text-primary)] disabled:opacity-40 disabled:hover:shadow-none"
+        style={{ boxShadow: "var(--shadow-sm)" }}
       >
-        {state === "loading" ? "SYNCING..." : "RE-SYNC ALL SOURCES"}
+        {state === "loading" ? "Syncing..." : "Sync now"}
       </motion.button>
 
       {state === "done" && result && (
-        <p className="font-mono text-xs leading-snug text-[var(--text-dim)]">
+        <p className="text-xs leading-snug text-[var(--text-tertiary)]">
           {result.gmailCount} email(s) + {result.driveCount} file(s) + {result.calendarCount} event(s) →{" "}
           {result.pagesWritten} page(s)
           {result.committed ? `, synced (${result.linksCreated} link(s))` : " (no changes)"}.
         </p>
       )}
 
-      {state === "error" && (
-        <p className="font-mono text-xs leading-snug text-[var(--neon-pink)]">{error}</p>
-      )}
+      {state === "error" && <p className="text-xs leading-snug text-[var(--danger)]">{error}</p>}
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { ArrowUp } from "lucide-react";
 import type { UIMessage, ChatStatus } from "ai";
 import { MessageBubble } from "./MessageBubble";
 import { SystemErrorBanner } from "./SystemErrorBanner";
@@ -36,11 +37,10 @@ export function Chat({
 
   return (
     <div className="flex h-full flex-1 flex-col gap-5">
-      <div className="clip-corner flex flex-1 flex-col gap-6 overflow-y-auto border-2 border-[var(--border-dim)] bg-[var(--bg-panel)]/60 p-8">
+      <div className="flex flex-1 flex-col gap-6 overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-panel)] p-8">
         {messages.length === 0 && !systemError && (
-          <p className="font-mono text-base text-[var(--text-dim)]">
-            <span className="text-[var(--neon-cyan)]">&gt;</span> Ask something like &ldquo;What&apos;s
-            my status on the SkillLayer application?&rdquo;
+          <p className="text-base text-[var(--text-tertiary)]">
+            Ask something like &ldquo;What&apos;s my status on the SkillLayer application?&rdquo;
           </p>
         )}
 
@@ -81,26 +81,25 @@ export function Chat({
         {systemError && <SystemErrorBanner message={systemError} onRetry={onRetry} />}
       </div>
 
-      <form onSubmit={handleSubmit} className="flex gap-3">
-        <span className="flex items-center font-mono text-xl text-[var(--neon-yellow)] glow-text-yellow">
-          &gt;
-        </span>
+      <form onSubmit={handleSubmit} className="flex items-center gap-3">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="ask your brain..."
+          placeholder="Ask your brain..."
           disabled={isBusy}
-          className="clip-corner-sm flex-1 border-2 border-[var(--border-dim)] bg-[var(--bg-panel)] px-5 py-4 text-base text-[var(--text-primary)] outline-none placeholder:text-[var(--text-dim)] focus:border-[var(--neon-yellow)] focus:shadow-[var(--glow-yellow)] disabled:opacity-50"
+          className="flex-1 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-panel)] px-5 py-4 text-base text-[var(--text-primary)] outline-none placeholder:text-[var(--text-tertiary)] focus:border-[var(--accent)] disabled:opacity-50"
         />
         <motion.button
           type="submit"
           disabled={isBusy || !input.trim()}
-          whileHover={isBusy || !input.trim() ? undefined : { scale: 1.02 }}
-          whileTap={isBusy || !input.trim() ? undefined : { scale: 0.98 }}
+          whileHover={isBusy || !input.trim() ? undefined : { y: -1, boxShadow: "var(--shadow-md)" }}
+          whileTap={isBusy || !input.trim() ? undefined : { scale: 0.96 }}
           transition={{ duration: 0.15 }}
-          className="clip-corner-sm border-2 border-[var(--neon-pink)]/70 bg-[var(--bg-panel-raised)] px-8 py-4 font-mono text-base font-bold text-[var(--neon-pink)] transition-shadow hover:glow-border-pink disabled:opacity-40 disabled:hover:shadow-none"
+          aria-label="Send"
+          className="flex h-[58px] w-[58px] shrink-0 items-center justify-center rounded-[var(--radius-lg)] bg-[var(--accent-strong)] text-white disabled:opacity-40 disabled:hover:shadow-none"
+          style={{ boxShadow: "var(--shadow-sm)" }}
         >
-          SEND
+          <ArrowUp size={22} />
         </motion.button>
       </form>
     </div>

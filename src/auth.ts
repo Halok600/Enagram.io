@@ -4,7 +4,13 @@ import type { JWT } from "next-auth/jwt";
 
 const GMAIL_READONLY_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
 const DRIVE_READONLY_SCOPE = "https://www.googleapis.com/auth/drive.readonly";
-const CALENDAR_READONLY_SCOPE = "https://www.googleapis.com/auth/calendar.readonly";
+// "View and edit events on all your calendars" — subsumes read access for
+// events, so this replaces (not adds to) the earlier calendar.readonly scope.
+// This app only ever touches calendarId "primary" events, never calendar
+// list/settings, so calendar.events is the narrowest scope that covers
+// create/update/delete/read — same "narrowest available" reasoning as
+// GMAIL_COMPOSE_SCOPE below. See JOURNAL.md 2026-08-10.
+const CALENDAR_EVENTS_SCOPE = "https://www.googleapis.com/auth/calendar.events";
 // Narrowest scope that permits draft creation. Google doesn't offer a
 // draft-only grant — gmail.compose technically also permits sending drafts
 // via the API — so "never sends" is an app-code guarantee (createDraftReply
@@ -55,7 +61,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       authorization: {
         params: {
-          scope: `openid email profile ${GMAIL_READONLY_SCOPE} ${DRIVE_READONLY_SCOPE} ${CALENDAR_READONLY_SCOPE} ${GMAIL_COMPOSE_SCOPE}`,
+          scope: `openid email profile ${GMAIL_READONLY_SCOPE} ${DRIVE_READONLY_SCOPE} ${CALENDAR_EVENTS_SCOPE} ${GMAIL_COMPOSE_SCOPE}`,
           access_type: "offline",
           prompt: "consent",
         },

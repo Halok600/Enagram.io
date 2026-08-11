@@ -20,7 +20,9 @@ grounded, conversational answers.
 - **Google Calendar** — **added 2026-08-09** (deadline extended to Aug 18,
   used the room for a third connector, same OAuth consent screen and
   Google API family as the other two, so still low marginal auth
-  overhead). Read-only (`calendar.readonly`), same as Gmail/Drive.
+  overhead). Originally read-only; **extended to full CRUD 2026-08-10**
+  (`create_calendar_event`/`update_calendar_event`/`delete_calendar_event`
+  tools, `calendar.events` scope — see the write-actions bullet below).
   Ingested as gbrain's `event` type (closest available fit in
   gbrain-base-v2 — see markdown.ts) via a 30-days-back/90-days-forward
   window (events don't have a natural "most recent N" the way
@@ -70,8 +72,15 @@ grounded, conversational answers.
   technically permitting send (`gmail.compose` covers both), so "never
   sends" is an application-code guarantee, not an OAuth-level one — noted
   here plainly rather than overclaiming what the scope itself restricts.
-  Everything else (Drive file modification, sending on any other channel)
-  remains fully out of scope and read-only.
+  **Extended 2026-08-10** with full Calendar event CRUD (create/update/
+  delete), scoped via `calendar.events` (the narrowest scope covering
+  create+update+delete+read for events — replaces, not adds to, the
+  earlier `calendar.readonly`). Personal events only — no `attendees`
+  field anywhere in the write path, so these tools can never send a real
+  invite email to a third party, confirmed with the user before building
+  it (see JOURNAL.md 2026-08-10). Everything else (Drive file
+  modification, sending on any other channel) remains fully out of scope
+  and read-only.
 - Real-time sync / webhooks — batch ingestion on demand or on a timer.
 - Slack/Notion connectors — deferred; Gmail+Drive is sufficient to satisfy
   "at least two tools" and Tier 2 examples are Gmail×Drive by design in the

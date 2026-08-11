@@ -1,17 +1,16 @@
 import type { Metadata } from "next";
-import { Share_Tech_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider, NO_FLASH_THEME_SCRIPT } from "./ThemeProvider";
 
-const terminalFont = Share_Tech_Mono({
-  variable: "--font-terminal",
-  weight: "400",
+const sansFont = Inter({
+  variable: "--font-sans",
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: "Personal Brain // Terminal",
-  description: "A conversational agent over your own Gmail and Drive.",
+  title: "Personal Brain",
+  description: "A conversational agent over your own Gmail, Drive, and Calendar.",
 };
 
 export default function RootLayout({
@@ -22,7 +21,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${terminalFont.variable} h-full antialiased`}
+      className={`${sansFont.variable} h-full antialiased`}
       // The no-flash script below sets [data-theme] on this element before
       // React hydrates, on purpose — the server has no way to know the
       // client's saved localStorage preference. That's a deliberate,

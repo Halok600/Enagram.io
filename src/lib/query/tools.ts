@@ -9,6 +9,7 @@ import {
   findRelated,
 } from "@/lib/brain/gbrain-remote";
 import { createDraftReply } from "@/lib/google/gmail";
+import { createEvent, updateEvent, deleteEvent } from "@/lib/google/calendar";
 
 /**
  * The url search_gmail already returns for citations
@@ -38,6 +39,7 @@ function formatHits(hits: Awaited<ReturnType<typeof searchGmail>>) {
         url: h.url,
         date: h.date,
         ...(threadId ? { threadId } : {}),
+        ...(h.eventId ? { eventId: h.eventId } : {}),
       };
     }),
   };
@@ -113,6 +115,73 @@ export const findRelatedTool = tool({
   execute: async ({ slug }) => findRelated(slug),
 });
 
+function createCalendarEventTool(accessToken: string) {
+  return tool({
+    description:
+      "Create a new event on the user's Google Calendar. Only call this when the user explicitly asks " +
+      "you to schedule/create/add a calendar event. Personal events only — there is no way to invite " +
+      "other people through this tool.",
+    inputSchema: z.object({
+      summary: z.string().describe("Event title"),
+      startDateTime: z.string().describe("Start time, ISO 8601 with timezone offset, e.g. 2026-08-17T14:30:00+05:30"),
+      endDateTime: z.string().describe("End time, ISO 8601 with timezone offset"),
+      description: z.string().optional(),
+      location: z.string().optional(),
+    }),
+    execute: async ({ summary, startDateTime, endDateTime, description, location }) => {
+      const event = await createEvent(accessToken, { summary, startDateTime, endDateTime, description, location });
+      return { status: "created" as const, summary: event.summary, start: event.start, webLink: event.htmlLink };
+    },
+  });
+}
+
+function updateCalendarEventTool(accessToken: string) {
+  return tool({
+    description:
+      "Update an existing Google Calendar event — only the fields you provide are changed, everything " +
+      "else stays as-is. Only call this when the user explicitly asks you to change/move/update an event. " +
+      "Requires the eventId field from a prior search_calendar result for that event — search for it first " +
+      "if you don't already have it. If the search result doesn't carry an eventId, say you can't locate " +
+      "it precisely enough to update rather than guessing.",
+    inputSchema: z.object({
+      eventId: z.string().describe("The eventId field from the search_calendar result for the event being changed"),
+      summary: z.string().optional(),
+      startDateTime: z.string().optional().describe("ISO 8601 with timezone offset"),
+      endDateTime: z.string().optional().describe("ISO 8601 with timezone offset"),
+      description: z.string().optional(),
+      location: z.string().optional(),
+    }),
+    execute: async ({ eventId, summary, startDateTime, endDateTime, description, location }) => {
+      const event = await updateEvent(accessToken, {
+        eventId,
+        summary,
+        startDateTime,
+        endDateTime,
+        description,
+        location,
+      });
+      return { status: "updated" as const, summary: event.summary, start: event.start, webLink: event.htmlLink };
+    },
+  });
+}
+
+function deleteCalendarEventTool(accessToken: string) {
+  return tool({
+    description:
+      "Permanently delete an event from the user's Google Calendar. Only call this when the user " +
+      "explicitly asks you to delete/cancel/remove a specific event. Requires the eventId field from a " +
+      "prior search_calendar result for that exact event — search for it first if you don't already have " +
+      "it, and if you're not sure which event they mean, ask for clarification rather than guessing.",
+    inputSchema: z.object({
+      eventId: z.string().describe("The eventId field from the search_calendar result for the event being deleted"),
+    }),
+    execute: async ({ eventId }) => {
+      await deleteEvent(accessToken, eventId);
+      return { status: "deleted" as const, eventId };
+    },
+  });
+}
+
 function createDraftGmailReplyTool(accessToken: string) {
   return tool({
     description:
@@ -152,6 +221,9 @@ export function createBrainTools(accessToken?: string): {
   forget_preference: typeof forgetPreferenceTool;
   find_related: typeof findRelatedTool;
   draft_gmail_reply?: ReturnType<typeof createDraftGmailReplyTool>;
+  create_calendar_event?: ReturnType<typeof createCalendarEventTool>;
+  update_calendar_event?: ReturnType<typeof updateCalendarEventTool>;
+  delete_calendar_event?: ReturnType<typeof deleteCalendarEventTool>;
 } {
   return {
     search_gmail: searchGmailTool,
@@ -160,6 +232,13 @@ export function createBrainTools(accessToken?: string): {
     save_preference: savePreferenceTool,
     forget_preference: forgetPreferenceTool,
     find_related: findRelatedTool,
-    ...(accessToken ? { draft_gmail_reply: createDraftGmailReplyTool(accessToken) } : {}),
+    ...(accessToken
+      ? {
+          draft_gmail_reply: createDraftGmailReplyTool(accessToken),
+          create_calendar_event: createCalendarEventTool(accessToken),
+          update_calendar_event: updateCalendarEventTool(accessToken),
+          delete_calendar_event: deleteCalendarEventTool(accessToken),
+        }
+      : {}),
   };
 }

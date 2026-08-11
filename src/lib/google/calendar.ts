@@ -60,3 +60,67 @@ export async function listEvents(accessToken: string, maxResults = 100): Promise
     .filter((e) => e.status !== "cancelled")
     .map(toCalendarEvent);
 }
+
+/**
+ * Personal events only — no `attendees` field anywhere in this file's
+ * write path. Google Calendar sends real invite emails the moment an
+ * event with attendees is created/updated, the same class of
+ * "sends something to a real third party" risk this app deliberately
+ * avoids for Gmail (drafts are never auto-sent). Confirmed with the user
+ * (2026-08-10) before building this: these tools only ever touch the
+ * user's own calendar.
+ */
+export async function createEvent(
+  accessToken: string,
+  { summary, startDateTime, endDateTime, description, location }: {
+    summary: string;
+    startDateTime: string;
+    endDateTime: string;
+    description?: string;
+    location?: string;
+  },
+): Promise<CalendarEvent> {
+  const calendar = getClient(accessToken);
+  const res = await calendar.events.insert({
+    calendarId: "primary",
+    requestBody: {
+      summary,
+      description,
+      location,
+      start: { dateTime: startDateTime },
+      end: { dateTime: endDateTime },
+    },
+  });
+  return toCalendarEvent(res.data);
+}
+
+export async function updateEvent(
+  accessToken: string,
+  { eventId, summary, startDateTime, endDateTime, description, location }: {
+    eventId: string;
+    summary?: string;
+    startDateTime?: string;
+    endDateTime?: string;
+    description?: string;
+    location?: string;
+  },
+): Promise<CalendarEvent> {
+  const calendar = getClient(accessToken);
+  const res = await calendar.events.patch({
+    calendarId: "primary",
+    eventId,
+    requestBody: {
+      ...(summary !== undefined ? { summary } : {}),
+      ...(description !== undefined ? { description } : {}),
+      ...(location !== undefined ? { location } : {}),
+      ...(startDateTime !== undefined ? { start: { dateTime: startDateTime } } : {}),
+      ...(endDateTime !== undefined ? { end: { dateTime: endDateTime } } : {}),
+    },
+  });
+  return toCalendarEvent(res.data);
+}
+
+export async function deleteEvent(accessToken: string, eventId: string): Promise<void> {
+  const calendar = getClient(accessToken);
+  await calendar.events.delete({ calendarId: "primary", eventId });
+}

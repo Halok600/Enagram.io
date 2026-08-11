@@ -2250,3 +2250,173 @@ already-Fast-Refreshed session directly.
 **Current state:** Glow/scanline intensity reduced app-wide via shared
 tokens plus the one clearly over-applied per-message case; visual
 sign-off from the user still pending.
+
+---
+
+## 2026-08-10 — Full redesign: cyberpunk terminal → modern production UI
+
+**Context:** The glow/scanline toning-down above wasn't enough — user
+asked for a full shift away from the cyberpunk aesthetic entirely:
+"make it look like a modern website rather than cyberpunk style, make
+it for production use, make it look good with all the animation and
+stuff." Given the scope (touches ~11 files, a real visual-system
+redesign that would be expensive to redo if the direction were wrong),
+used `EnterPlanMode` rather than iterating blind — confirmed the one
+genuinely subjective call (primary accent color) via `AskUserQuestion`
+before writing the plan: **indigo/violet**, confirmed over blue/amber/
+teal alternatives.
+
+**Direction:** Linear/Notion-AI-adjacent — restrained neutral surfaces
+(`#0b0d12` dark / `#fafafa` light, not near-black/pure-white), a single
+indigo accent (`#6366f1`-ish) instead of the old cyan/pink/yellow trio,
+standard `border-radius` instead of `clip-path` cut corners, soft
+`box-shadow` elevation instead of multi-layer neon glow, `Inter`
+(`next/font/google`) instead of monospace-everywhere, sentence-case copy
+instead of ALL_CAPS/underscore terminal labels ("SYSTEM_STATUS" →
+"Connected sources", "RE-SYNC ALL SOURCES" → "Sync now"). Framer Motion
+kept throughout but retuned toward "premium micro-interaction" — button
+hover became a subtle lift (`translateY` + shadow) instead of scale-only,
+the 5-bar terminal-EQ thinking indicator became 3 bouncing dots (the
+standard chat-app "typing" pattern).
+
+**Scope:** `globals.css` (full token rewrite — removed every
+`--neon-*`/`--glow-*`/`--clip-corner*`/`body::before` scanline token,
+added `--accent`/`--text-*`/`--border`/`--shadow-*`/`--radius-*`),
+`layout.tsx` (font swap), and all 9 chat/UI components restyled to the
+new tokens (`page.tsx`'s `LoginScreen`, `Sidebar.tsx`, `Chat.tsx`,
+`MessageBubble.tsx`, `SourceChip.tsx`, `ThinkingIndicator.tsx`,
+`SystemErrorBanner.tsx`, `ThemeToggle.tsx`, `SyncButton.tsx`) —
+`ThemeProvider.tsx`'s theme mechanism itself needed zero changes, same
+as the very first dark/light rollout (2026-08-04): every component
+already read colors from tokens, never hardcoded hex.
+
+**Bug hit and fixed (a real, self-inflicted one, not a code defect) —
+`rm -rf .next && next build` broke the user's live dev server.** After
+implementing all 11 files, ran the usual verification sequence
+(`tsc`/`eslint`/clean build) and the user's already-running `npm run
+dev` started 500ing. Root cause: the user's dev server was actively
+running against `.next` as a live dev-mode cache; `rm -rf .next`
+deleted it out from under that live process, and the subsequent `next
+build` regenerated `.next` in PRODUCTION mode — an incompatible
+structure for a running dev-mode server. This had been safe every prior
+round of this session because either no dev server was running or it
+happened to get restarted between rounds; this was the first time
+verification ran against an actively-live, continuously-used dev
+session. Fixed by asking the user to restart `npm run dev` (regenerates
+a clean dev-mode cache) — and adjusted practice going forward: no `rm
+-rf .next` while a dev server is confirmed live. (Learned the hard way,
+twice — see the calendar-CRUD entry below: even a bare `next build`
+without the `rm -rf` first still overwrites the same directory and can
+cause the identical problem, so the real fix is skipping the full build
+step entirely once a dev server is known to be live, relying on
+`tsc`/`eslint` alone since neither touches `.next`.)
+
+**Verified:**
+- `tsc --noEmit`, `eslint src evals`, `next build` all clean (pre-dev-
+  server-conflict).
+- Grepped the whole `src` tree for every removed token/class name
+  (`clip-corner`, `glow-*`, `neon-*`, `border-dim`, `text-dim`,
+  `font-terminal`, `grid-line`, `radial-*`) — zero stale references,
+  confirming the reskin didn't leave orphaned classes anywhere.
+- Read computed styles directly via injected JS against the login page
+  (the one screen reachable pre-auth) since the Browser pane wasn't
+  compositing screenshots this session — confirmed the live page
+  actually reflects the new tokens, not just that the source changed.
+- User confirmed live (after the dev-server restart) that it "looks good."
+
+**Current state:** Full redesign shipped and confirmed live. Same
+standing limitation as ever: the authenticated chat UI itself could
+only be spot-checked via computed styles and the user's own eyes, not a
+full agent screenshot, since it's behind Google OAuth.
+
+---
+
+## 2026-08-10 — Calendar CRUD: create, update, delete events from chat
+
+**Context:** User asked to round out the Calendar connector (feature
+#5, read-only since 2026-08-09) into a real two-way integration —
+create, update, delete events directly from a chat request, "so it can
+look good," i.e. feel like a complete feature rather than search-only.
+Explicitly flagged by the user as real scope ("I know it too much of
+work but I want to add this"). Used `EnterPlanMode` again given the
+multi-file scope, and confirmed one safety-relevant design choice via
+`AskUserQuestion` before planning: whether these tools should support
+inviting other people (attendees) — user chose **no attendees,
+personal events only**, matching the same caution already applied to
+Gmail (drafts never auto-sent) — these tools can never email a real
+third party.
+
+**OAuth scope:** replaced `calendar.readonly` with
+`https://www.googleapis.com/auth/calendar.events` ("View and edit
+events on all your calendars") rather than requesting both — this app
+only ever touches `calendarId: "primary"` events, never calendar
+list/settings, so `calendar.events` alone is the narrowest scope
+covering create+update+delete+read for events, same "narrowest
+available" reasoning already used for `gmail.compose` (2026-08-09).
+Same consequence as every prior scope change: existing sessions need to
+re-consent, and the scope likely needs adding to the Google Cloud OAuth
+consent screen's configured list first.
+
+**Exposing the real Google eventId — a genuine design problem, not just
+plumbing.** Update/delete need the live Calendar API's actual event id.
+Unlike Gmail's `threadId` (extractable straight from the citation URL),
+Calendar's `htmlLink` embeds a different base64 composite, not the raw
+id. Fixed by extending `getPageMeta` in
+[`gbrain-remote.ts`](src/lib/brain/gbrain-remote.ts) to also read
+`frontmatter.source_id` (already stored as `calendar:<eventId>` by
+`normalize.ts` since the connector was first built) and strip the
+prefix — exposed as an `eventId` field on `search_calendar` results,
+same `MAX_URL_LOOKUPS`-capped top-3 pattern already governing url/date
+enrichment (an already-documented, accepted latency trade-off, not a
+new one).
+
+**Implementation:**
+- [`calendar.ts`](src/lib/google/calendar.ts) — `createEvent`
+  (`events.insert`), `updateEvent` (`events.patch` — partial update,
+  only supplied fields change), `deleteEvent` (`events.delete`). No
+  `attendees` field anywhere in the write path, by design.
+- [`auth.ts`](src/auth.ts) — scope swap, documented inline.
+- [`gbrain-remote.ts`](src/lib/brain/gbrain-remote.ts) — `eventId`
+  enrichment described above.
+- [`tools.ts`](src/lib/query/tools.ts) — three new tools
+  (`create_calendar_event`/`update_calendar_event`/
+  `delete_calendar_event`), modeled directly on `draft_gmail_reply`'s
+  shape: need the user's live OAuth token, factory-gated in
+  `createBrainTools`, excluded from the eval harness's fixed tool set
+  (same precedent as every other write tool this session — automated
+  evals must never mutate real Google data). `update`/`delete` require
+  an `eventId`, not fuzzy title-matching, specifically to reduce the
+  chance of silently acting on the wrong event.
+- [`config.ts`](src/lib/query/config.ts) — new rules mirroring
+  `draft_gmail_reply`'s guardrails: explicit-request-only, never
+  proactive, confirm what changed plainly, and — specifically for
+  delete — ask for clarification rather than guess when the target
+  event is ambiguous, since deletion isn't easily undone.
+- UI: [`Workspace.tsx`](src/app/chat/Workspace.tsx)/
+  [`Sidebar.tsx`](src/app/chat/Sidebar.tsx) get three tool-activity
+  entries ("Creating event"/"Updating event"/"Deleting event",
+  `CalendarPlus`/`CalendarCog`/`CalendarX` icons) styled with the new
+  modern-theme tokens from the redesign above, not the old cyberpunk ones.
+
+**Verified:**
+- `tsc --noEmit`, `eslint src evals` clean.
+- `next build` — ran once more without first deleting `.next`, on the
+  (correct) theory from the redesign entry above that the `rm -rf` wasn't
+  the actual problem. It wasn't, but the plain `next build` alone was:
+  it still overwrites the same directory in production mode, so this
+  most likely broke the user's live dev server again the same way.
+  Flagged directly rather than assuming it was fine — real fix going
+  forward is skipping the full build step entirely once a dev server is
+  known to be live (`tsc`/`eslint` alone are safe; neither touches
+  `.next`).
+- `bun run evals/run-evals.ts`: **6/6 passed**, no regression, and
+  confirms the three new write tools are correctly excluded from the
+  harness (same as `draft_gmail_reply`/`save_preference`/
+  `forget_preference` before them).
+- Not yet verified live: an actual create/update/delete round-trip
+  against the user's real calendar. Needs re-consent (new scope) first,
+  same standing pattern as every OAuth-scope change this session.
+
+**Current state:** Calendar CRUD implemented and statically verified;
+live confirmation pending — will need the user to re-consent, then test
+create → update → delete against their real calendar.

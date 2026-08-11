@@ -18,21 +18,21 @@ export function ThemeToggle() {
       type="button"
       onClick={toggleTheme}
       aria-label={`Switch to ${isDark ? "light" : "dark"} mode`}
-      className="clip-corner-sm relative shrink-0 border-2 border-[var(--border-dim)] bg-[var(--bg-panel)] p-[3px] transition-shadow hover:glow-border-cyan"
+      className="relative shrink-0 rounded-full border border-[var(--border)] bg-[var(--bg-panel)] p-[3px]"
       style={{ width: TRACK_WIDTH, height: THUMB_SIZE + PADDING * 2 }}
     >
       <Moon
         size={12}
-        className="pointer-events-none absolute left-[8px] top-1/2 -translate-y-1/2 text-[var(--text-dim)]"
+        className="pointer-events-none absolute left-[8px] top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]"
         aria-hidden
       />
       <Sun
         size={12}
-        className="pointer-events-none absolute right-[8px] top-1/2 -translate-y-1/2 text-[var(--text-dim)]"
+        className="pointer-events-none absolute right-[8px] top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]"
         aria-hidden
       />
       <motion.span
-        className="glow-border-cyan clip-corner-sm relative z-10 flex items-center justify-center bg-[var(--neon-cyan)]"
+        className="relative z-10 flex items-center justify-center rounded-full bg-[var(--accent-strong)]"
         style={{ width: THUMB_SIZE, height: THUMB_SIZE }}
         animate={{ x: isDark ? 0 : THUMB_TRAVEL }}
         transition={{ type: "spring", stiffness: 480, damping: 32 }}
@@ -47,9 +47,9 @@ export function ThemeToggle() {
             className="flex"
           >
             {isDark ? (
-              <Moon size={13} className="text-[var(--bg)]" />
+              <Moon size={13} className="text-white" />
             ) : (
-              <Sun size={13} className="text-[var(--bg)]" />
+              <Sun size={13} className="text-white" />
             )}
           </motion.span>
         </AnimatePresence>

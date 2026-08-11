@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { Mail, HardDrive, type LucideIcon } from "lucide-react";
 
 export type Source = {
   tool: "search_gmail" | "search_drive";
@@ -8,22 +9,22 @@ export type Source = {
   url?: string;
 };
 
-const ICON: Record<Source["tool"], string> = {
-  search_gmail: "✉",
-  search_drive: "▤",
+const ICON: Record<Source["tool"], LucideIcon> = {
+  search_gmail: Mail,
+  search_drive: HardDrive,
 };
 
 const BASE_CLASSES =
-  "clip-corner-sm inline-flex items-center gap-2 border-2 border-[var(--border-dim)] " +
-  "bg-[var(--bg-panel-raised)] px-3 py-1.5 font-mono text-sm font-bold text-[var(--neon-cyan)] " +
-  "transition-colors hover:border-[var(--neon-yellow)] hover:text-[var(--neon-yellow)] hover:glow-text-yellow";
-const LINK_CLASSES = `${BASE_CLASSES} underline decoration-2 underline-offset-2`;
+  "inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] " +
+  "bg-[var(--bg-panel-raised)] px-3 py-1.5 text-sm font-medium text-[var(--text-secondary)] " +
+  "transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]";
 
 export function SourceChip({ source }: { source: Source }) {
   const label = source.title || source.slug;
+  const Icon = ICON[source.tool];
   const content = (
     <>
-      <span aria-hidden>{ICON[source.tool]}</span>
+      <Icon size={14} aria-hidden />
       <span className="max-w-[240px] truncate">{label}</span>
     </>
   );
@@ -42,8 +43,8 @@ export function SourceChip({ source }: { source: Source }) {
       target="_blank"
       rel="noopener noreferrer"
       title={`relevance ${source.score.toFixed(2)} — open source`}
-      className={LINK_CLASSES}
-      whileHover={{ scale: 1.03 }}
+      className={BASE_CLASSES}
+      whileHover={{ y: -1 }}
       whileTap={{ scale: 0.97 }}
       transition={{ duration: 0.15 }}
     >

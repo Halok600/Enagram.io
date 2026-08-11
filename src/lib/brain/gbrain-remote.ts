@@ -6,6 +6,7 @@ export type BrainSearchHit = {
   snippet: string;
   url?: string;
   date?: string;
+  eventId?: string;
 };
 
 function requireEnv(name: string): string {
@@ -71,10 +72,21 @@ type RawSearchHit = {
  * were structurally unanswerable — the model had no timestamp on any
  * result at all.
  */
-async function getPageMeta(slug: string): Promise<{ url?: string; date?: string }> {
+async function getPageMeta(slug: string): Promise<{ url?: string; date?: string; eventId?: string }> {
   try {
-    const page = await mcpCall<{ frontmatter?: { url?: string; date?: string } }>("get_page", { slug });
-    return { url: page.frontmatter?.url, date: page.frontmatter?.date };
+    const page = await mcpCall<{ frontmatter?: { url?: string; date?: string; source_id?: string } }>(
+      "get_page",
+      { slug },
+    );
+    const sourceId = page.frontmatter?.source_id;
+    // Google Calendar CRUD (create_calendar_event/update/delete) needs the
+    // raw event id, which — unlike Gmail's threadId — isn't recoverable from
+    // the citation url (htmlLink embeds a different base64 composite, not
+    // the real id). normalize.ts already stores it as "calendar:<eventId>"
+    // in source_id; strip the prefix here so it's only ever calendar hits
+    // that carry it. See JOURNAL.md 2026-08-10.
+    const eventId = sourceId?.startsWith("calendar:") ? sourceId.slice("calendar:".length) : undefined;
+    return { url: page.frontmatter?.url, date: page.frontmatter?.date, eventId };
   } catch (err) {
     console.error(`Failed to fetch frontmatter for ${slug}`, err);
     return {};
@@ -117,7 +129,7 @@ export async function searchBrain(
     filtered.map(async (hit, i) => {
       if (i >= MAX_URL_LOOKUPS) return hit;
       const meta = await getPageMeta(hit.slug);
-      return { ...hit, url: meta.url, date: meta.date };
+      return { ...hit, url: meta.url, date: meta.date, eventId: meta.eventId };
     }),
   );
   return enriched;
