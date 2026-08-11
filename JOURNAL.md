@@ -2142,3 +2142,66 @@ entirely rather than fighting it.
 **Current state:** Feature #8 implemented and statically verified; live
 confirmation pending. This is the last of the original 8-feature list —
 once verified, all 8 bonus features are shipped.
+
+---
+
+## 2026-08-10 — Feature #8 removed after live testing found an unresolvable environment issue
+
+**Context:** User tested voice input live and consistently hit "No speech
+detected" despite genuinely speaking. Worked through this in three rounds
+rather than giving up after the first failure:
+
+1. **Ruled out hardware/permissions.** Site-level mic permission confirmed
+   "Allow," Windows input device confirmed correct (USB Audio Device,
+   input level 100/100) — the basic setup was fine.
+2. **Applied the standard code fix.** `continuous: true` mode has
+   documented Chrome reliability issues (can fire `no-speech` prematurely
+   even with working audio input); rewrote the hook to chain short
+   single-utterance (`continuous: false`) recognitions via `onend`
+   instead, the well-established workaround. Confirmed via the visible
+   "listening..." state and ambient fan noise being picked up that audio
+   genuinely was reaching the browser — still failed.
+3. **Ruled out extensions.** Tested in an Incognito window (no
+   extensions loaded) — still failed identically.
+
+**Diagnosis, not fully confirmed:** with hardware, permissions, browser
+extensions, and the known `continuous`-mode bug all ruled out, the
+remaining explanation is something at the network/environment level
+between this Chrome install and Google's cloud speech-recognition
+backend (the Web Speech API sends audio there for transcription; if
+that specific connection is blocked or degraded — firewall, VPN,
+regional restriction — while general internet/Google connectivity works
+fine, "no-speech" is a plausible symptom). Chrome's DevTools Network tab
+showed nothing relevant, but this isn't conclusive either way — the API
+is implemented at the browser/OS level and its network traffic often
+doesn't appear as a page-visible fetch/XHR request, so an empty Network
+tab doesn't distinguish "working normally" from "silently blocked."
+
+**Decision: removed rather than shipped with an unresolved question
+mark.** Confirming the actual root cause would need lower-level
+diagnostics (raw Chrome network export, testing on a different network
+entirely) — disproportionate effort for the lowest-priority item on an
+8-feature bonus list, with a hard Aug 18 deadline and a demo video +
+submission email still outstanding. Explicitly asked the user how to
+proceed (document as a known limitation and keep the code / keep
+debugging / remove entirely) rather than deciding unilaterally — user
+chose removal: don't ship a feature whose actual live behavior is an
+open question, even though the code itself was implemented correctly to
+the Web Speech API spec and passed two independent debugging rounds.
+
+**Reverted:** deleted `useSpeechRecognition.ts`, restored `Chat.tsx` to
+its pre-feature state (no mic button, no speech wiring), removed the
+SPEC.md §2 scope-addition bullet. Kept `d8d17d4` (the original "add
+voice input" commit) in git history rather than resetting it away — even
+though it was never pushed and could have been erased cleanly, an
+honest add-then-remove pair in the log is more consistent with this
+project's whole documentation ethos than making it look like the
+attempt never happened.
+
+**Current state:** Back to 7 of the original 8 features shipped and
+verified (#1-#7). #8 (voice input) is the one item on the original list
+that was attempted, debugged in good faith, and consciously not shipped
+— worth being able to explain this exact reasoning if asked in the
+submission or an interview: knowing when to stop debugging a low-value
+bonus item and ship what's solid is itself a real engineering judgment
+call, not a gap to hide.

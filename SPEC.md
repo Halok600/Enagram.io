@@ -57,12 +57,6 @@ grounded, conversational answers.
   Drive file it's linked to. Capped and gated to only run when a sync
   finds real changes, so it doesn't add latency to the common no-op
   auto-sync case.
-- **Voice input** — **added 2026-08-10**: dictate into the chat input via
-  the browser's Web Speech API (Chrome/Edge; Firefox doesn't support it,
-  so the mic control is hidden there rather than shown broken). Pure
-  frontend, no backend/gbrain/OAuth involvement. Transcribed text lands
-  in the input box for the user to review/edit before sending — never
-  auto-sent on a raw transcript.
 
 ### Out of scope (explicitly, to protect the timeline)
 - Multi-user auth / account management — single user (me), OAuth to my own
