@@ -14,8 +14,12 @@ const markdownComponents: Components = {
       {children}
     </a>
   ),
+  // No glow here (unlike most accented text elsewhere): every bold term in
+  // every chat response would carry it, and answers commonly have several
+  // per message — by far the highest-frequency glow usage in real use, and
+  // the main contributor to the "too busy" feedback. See JOURNAL.md 2026-08-10.
   strong: ({ children }) => (
-    <strong className="font-bold text-[var(--neon-pink)] glow-text-pink">{children}</strong>
+    <strong className="font-bold text-[var(--neon-pink)]">{children}</strong>
   ),
   ul: ({ children }) => <ul className="my-2 list-none space-y-1.5 pl-0">{children}</ul>,
   li: ({ children }) => (

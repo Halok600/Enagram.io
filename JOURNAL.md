@@ -2205,3 +2205,48 @@ that was attempted, debugged in good faith, and consciously not shipped
 submission or an interview: knowing when to stop debugging a low-value
 bonus item and ship what's solid is itself a real engineering judgment
 call, not a gap to hide.
+
+---
+
+## 2026-08-10 — UI feedback: toned down the glow and scanlines
+
+**Context:** User feedback on the overall look: "too busy, tone down the
+glow and scanlines." Two-part fix rather than a blanket strip-everything
+pass, to keep the theme's identity while cutting the noise.
+
+**1. Reduced the shared glow tokens** (`--glow-cyan`/`-pink`/`-yellow`,
+[`globals.css`](src/app/globals.css), both dark and light themes) — from
+a 3-layer shadow spreading out to 48px at up to 0.9 opacity down to a
+2-layer shadow maxing out at 10px and 0.5 opacity. Since every
+`glow-text-*`/`glow-border-*` utility and every inline glow across the
+app reads from these tokens, this single change proportionally reduces
+roughly 15 different usages (headers, buttons, badges, the theme
+toggle) at once, without touching each file individually.
+
+**2. Removed the single highest-frequency glow usage specifically** —
+[`MessageBubble.tsx`](src/app/chat/MessageBubble.tsx)'s `strong`
+markdown renderer applied `glow-text-pink` to EVERY bold term in EVERY
+chat response unconditionally. Given the model's own answers commonly
+use several bold terms per message (status labels, key names, dates),
+this was almost certainly the single biggest contributor to "busy" in
+actual use — far more than any static header, which only appears once
+per screen. Dropped the glow, kept the bold pink color for emphasis.
+
+**3. Toned down the scanline/grid background overlay** — `--grid-line`/
+`--grid-line-thin`/`--radial-a`/`--radial-b` (the `body::before`
+texture) roughly halved in both themes.
+
+**Verified:** `tsc --noEmit`, `eslint src evals`, `next build` all
+clean. Confirmed live against the user's own already-running dev server
+(reused rather than starting a second one on port 3000, which is
+pinned by `NEXTAUTH_URL` for the OAuth callback) — read the landing
+page's computed `box-shadow` directly via injected JS rather than a
+screenshot (the Browser pane wasn't compositing frames in this session):
+confirmed the rendered shadow matches the new 2-layer/10px/0.5-opacity
+values exactly, not the old 3-layer/48px/0.9 ones. A full visual
+screenshot wasn't available this round; asked the user to eyeball their
+already-Fast-Refreshed session directly.
+
+**Current state:** Glow/scanline intensity reduced app-wide via shared
+tokens plus the one clearly over-applied per-message case; visual
+sign-off from the user still pending.

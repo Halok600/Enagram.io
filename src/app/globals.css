@@ -26,17 +26,20 @@
   --border-dim: rgba(0, 240, 255, 0.22);
   --border-glow: rgba(0, 240, 255, 0.7);
 
-  /* Strong, layered glow — meant to actually read as "lit up," not a hint. */
-  --glow-cyan: 0 0 8px rgba(0, 240, 255, 0.9), 0 0 24px rgba(0, 240, 255, 0.55), 0 0 48px rgba(0, 240, 255, 0.25);
-  --glow-pink: 0 0 8px rgba(255, 0, 60, 0.9), 0 0 24px rgba(255, 0, 60, 0.55), 0 0 48px rgba(255, 0, 60, 0.25);
-  --glow-yellow: 0 0 8px rgba(252, 238, 10, 0.9), 0 0 24px rgba(252, 238, 10, 0.55), 0 0 48px rgba(252, 238, 10, 0.25);
+  /* Toned down 2026-08-10 (user feedback: original 3-layer/48px-spread glow
+     read as "too busy") — a subtle lit-edge accent now, not a halo. Two
+     layers instead of three, ~80% smaller max spread, lower peak opacity. */
+  --glow-cyan: 0 0 3px rgba(0, 240, 255, 0.5), 0 0 10px rgba(0, 240, 255, 0.22);
+  --glow-pink: 0 0 3px rgba(255, 0, 60, 0.5), 0 0 10px rgba(255, 0, 60, 0.22);
+  --glow-yellow: 0 0 3px rgba(252, 238, 10, 0.5), 0 0 10px rgba(252, 238, 10, 0.22);
 
   /* Scanline/grid overlay tint — themed so the texture reads correctly on
-     both a near-black and a near-white base instead of just looking muddy. */
-  --grid-line: rgba(0, 240, 255, 0.05);
-  --grid-line-thin: rgba(0, 240, 255, 0.025);
-  --radial-a: rgba(255, 0, 60, 0.07);
-  --radial-b: rgba(0, 240, 255, 0.07);
+     both a near-black and a near-white base instead of just looking muddy.
+     Toned down 2026-08-10 alongside the glow, same feedback. */
+  --grid-line: rgba(0, 240, 255, 0.028);
+  --grid-line-thin: rgba(0, 240, 255, 0.012);
+  --radial-a: rgba(255, 0, 60, 0.035);
+  --radial-b: rgba(0, 240, 255, 0.035);
   --selection-text: #ffffff;
 
   /* Cut-corner shape used on panels/buttons/inputs for the "tech hardware" look. */
@@ -77,14 +80,14 @@
   --border-dim: rgba(0, 85, 255, 0.32);
   --border-glow: rgba(0, 85, 255, 0.85);
 
-  --glow-cyan: 0 0 8px rgba(0, 85, 255, 0.7), 0 0 24px rgba(0, 85, 255, 0.4), 0 0 48px rgba(0, 85, 255, 0.2);
-  --glow-pink: 0 0 8px rgba(214, 0, 158, 0.7), 0 0 24px rgba(214, 0, 158, 0.4), 0 0 48px rgba(214, 0, 158, 0.2);
-  --glow-yellow: 0 0 8px rgba(74, 158, 0, 0.7), 0 0 24px rgba(74, 158, 0, 0.4), 0 0 48px rgba(74, 158, 0, 0.2);
+  --glow-cyan: 0 0 3px rgba(0, 85, 255, 0.4), 0 0 10px rgba(0, 85, 255, 0.18);
+  --glow-pink: 0 0 3px rgba(214, 0, 158, 0.4), 0 0 10px rgba(214, 0, 158, 0.18);
+  --glow-yellow: 0 0 3px rgba(74, 158, 0, 0.4), 0 0 10px rgba(74, 158, 0, 0.18);
 
-  --grid-line: rgba(15, 23, 42, 0.045);
-  --grid-line-thin: rgba(15, 23, 42, 0.02);
-  --radial-a: rgba(214, 0, 158, 0.05);
-  --radial-b: rgba(0, 85, 255, 0.05);
+  --grid-line: rgba(15, 23, 42, 0.028);
+  --grid-line-thin: rgba(15, 23, 42, 0.012);
+  --radial-a: rgba(214, 0, 158, 0.025);
+  --radial-b: rgba(0, 85, 255, 0.025);
   --selection-text: #ffffff;
 }
 
