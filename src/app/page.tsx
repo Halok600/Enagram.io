@@ -14,7 +14,13 @@ export default async function Home() {
   // `next start` never do. See JOURNAL.md 2026-08-05.
   const ingestionEnabled = !process.env.VERCEL;
 
-  return <Workspace email={session.user?.email ?? "unknown"} ingestionEnabled={ingestionEnabled} />;
+  return (
+    <Workspace
+      email={session.user?.email ?? "unknown"}
+      name={session.user?.name ?? undefined}
+      ingestionEnabled={ingestionEnabled}
+    />
+  );
 }
 
 function LoginScreen() {

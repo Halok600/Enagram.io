@@ -34,23 +34,38 @@ function toCalendarEvent(event: calendar_v3.Schema$Event): CalendarEvent {
   };
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 /**
  * Calendar has no natural "most recent N" like Gmail/Drive — events are
  * relative to now, not to when they were created/modified — so this windows
- * by time instead: 30 days back (covers "what did I have last week")
- * through 90 days forward (covers "what's my next X"). singleEvents expands
- * recurring events into individual instances so each occurrence is its own
- * searchable page rather than one opaque recurrence rule.
+ * by time instead. Default window (ingestion, feature #5): 30 days back
+ * (covers "what did I have last week") through 90 days forward (covers
+ * "what's my next X"). singleEvents expands recurring events into
+ * individual instances so each occurrence is its own searchable page
+ * rather than one opaque recurrence rule.
+ *
+ * `timeMin`/`timeMax` are overridable (ISO 8601) so the /calendar page's
+ * month/week navigation and the hover-card summary can request their own
+ * exact range through this same function instead of three separate copies
+ * of the same Calendar API call.
  */
-export async function listEvents(accessToken: string, maxResults = 100): Promise<CalendarEvent[]> {
+export async function listEvents(
+  accessToken: string,
+  opts: { timeMin?: string; timeMax?: string; maxResults?: number } = {},
+): Promise<CalendarEvent[]> {
   const calendar = getClient(accessToken);
   const now = Date.now();
-  const DAY_MS = 24 * 60 * 60 * 1000;
+  const {
+    timeMin = new Date(now - 30 * DAY_MS).toISOString(),
+    timeMax = new Date(now + 90 * DAY_MS).toISOString(),
+    maxResults = 100,
+  } = opts;
 
   const res = await calendar.events.list({
     calendarId: "primary",
-    timeMin: new Date(now - 30 * DAY_MS).toISOString(),
-    timeMax: new Date(now + 90 * DAY_MS).toISOString(),
+    timeMin,
+    timeMax,
     maxResults,
     singleEvents: true,
     orderBy: "startTime",

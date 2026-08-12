@@ -59,6 +59,21 @@ grounded, conversational answers.
   Drive file it's linked to. Capped and gated to only run when a sync
   finds real changes, so it doesn't add latency to the common no-op
   auto-sync case.
+- **Modern empty-state landing UI + interactive `/calendar` module** —
+  **added 2026-08-10**: a Gemini/ChatGPT-style empty-chat hero (greeting
+  + animated suggestion pills, input bar that animates from centered to
+  bottom-pinned on first send) replacing the earlier one-line hint; a
+  hover preview card on the sidebar's Calendar row (this month's event
+  count + next 3 upcoming, live-fetched); and a full `/calendar` page —
+  month/week grid, click-to-create, click-to-view/edit, delete-with-
+  confirm, and Framer-Motion drag-and-drop rescheduling (month view
+  only) — built on the same Calendar CRUD functions as the chat tools
+  (`create`/`update`/`deleteEvent` in `calendar.ts`), so the page and
+  the chat agent share one live Google Calendar. Every mutation from the
+  page also fires the same fire-and-forget re-sync as elsewhere, so the
+  chat agent can find a change made on the page promptly. One disclosed
+  scope call: "weekly grid" is a 7-day agenda-column view, not an hourly
+  time grid — see JOURNAL.md 2026-08-10 for the reasoning.
 
 ### Out of scope (explicitly, to protect the timeline)
 - Multi-user auth / account management — single user (me), OAuth to my own

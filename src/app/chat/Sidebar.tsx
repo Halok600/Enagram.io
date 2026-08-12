@@ -1,3 +1,5 @@
+import { useState } from "react";
+import Link from "next/link";
 import {
   Mail,
   HardDrive,
@@ -12,10 +14,11 @@ import {
   CalendarCog,
   CalendarX,
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { SyncButton } from "../SyncButton";
 import { disconnect } from "../actions";
 import { ThemeToggle } from "./ThemeToggle";
+import { CalendarHoverCard } from "../components/CalendarHoverCard";
 
 const TOOL_META: Record<string, { label: string; icon: typeof Mail }> = {
   search_gmail: { label: "Searching Gmail", icon: Mail },
@@ -41,6 +44,25 @@ function StatusRow({ icon: Icon, label }: { icon: typeof Mail; label: string }) 
         <span className="h-1.5 w-1.5 rounded-full bg-[var(--success)]" aria-hidden />
         Connected
       </span>
+    </div>
+  );
+}
+
+/** The only one of the three connected-source rows that links out and
+ * shows a hover preview — Gmail/Drive stay plain `StatusRow`s. */
+function CalendarStatusRow() {
+  const [isHovering, setIsHovering] = useState(false);
+
+  return (
+    <div
+      className="relative"
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
+    >
+      <Link href="/calendar" className="block">
+        <StatusRow icon={CalendarDays} label="Calendar" />
+      </Link>
+      <AnimatePresence>{isHovering && <CalendarHoverCard />}</AnimatePresence>
     </div>
   );
 }
@@ -108,7 +130,7 @@ export function Sidebar({
           </h2>
           <StatusRow icon={Mail} label="Gmail" />
           <StatusRow icon={HardDrive} label="Drive" />
-          <StatusRow icon={CalendarDays} label="Calendar" />
+          <CalendarStatusRow />
         </section>
 
         <section className="flex flex-col gap-3">

@@ -6,9 +6,11 @@ import { ArrowUp } from "lucide-react";
 import type { UIMessage, ChatStatus } from "ai";
 import { MessageBubble } from "./MessageBubble";
 import { SystemErrorBanner } from "./SystemErrorBanner";
+import { EmptyState } from "./EmptyState";
 import { extractSources } from "./extractSources";
 
 export function Chat({
+  name,
   messages,
   status,
   userTimestamps,
@@ -17,6 +19,7 @@ export function Chat({
   systemError,
   onRetry,
 }: {
+  name?: string;
   messages: UIMessage[];
   status: ChatStatus;
   userTimestamps: number[];
@@ -27,6 +30,7 @@ export function Chat({
 }) {
   const [input, setInput] = useState("");
   const isBusy = status === "submitted" || status === "streaming";
+  const isEmpty = messages.length === 0 && !systemError;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -36,52 +40,55 @@ export function Chat({
   }
 
   return (
-    <div className="flex h-full flex-1 flex-col gap-5">
-      <div className="flex flex-1 flex-col gap-6 overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-panel)] p-8">
-        {messages.length === 0 && !systemError && (
-          <p className="text-base text-[var(--text-tertiary)]">
-            Ask something like &ldquo;What&apos;s my status on the SkillLayer application?&rdquo;
-          </p>
-        )}
+    <div className={`flex h-full flex-1 flex-col gap-5 ${isEmpty ? "justify-center" : ""}`}>
+      {isEmpty ? (
+        <EmptyState name={name} onSend={onSend} />
+      ) : (
+        <div className="flex flex-1 flex-col gap-6 overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-panel)] p-8">
+          {(() => {
+            const userMessageIds = messages.filter((m) => m.role === "user").map((m) => m.id);
 
-        {(() => {
-          const userMessageIds = messages.filter((m) => m.role === "user").map((m) => m.id);
+            return messages.map((message) => {
+              const isUser = message.role === "user";
+              const text = message.parts
+                .filter((p) => p.type === "text")
+                .map((p) => (p as { text: string }).text)
+                .join("");
 
-          return messages.map((message) => {
-            const isUser = message.role === "user";
-            const text = message.parts
-              .filter((p) => p.type === "text")
-              .map((p) => (p as { text: string }).text)
-              .join("");
+              // A failed generation can leave a real-but-empty assistant
+              // message in the transcript (the request errored before any
+              // tokens arrived). Once we're no longer busy, an empty bubble
+              // with nothing in it is just visual noise — the error banner
+              // below explains what happened instead.
+              if (!isUser && !text && !isBusy) return null;
 
-            // A failed generation can leave a real-but-empty assistant
-            // message in the transcript (the request errored before any
-            // tokens arrived). Once we're no longer busy, an empty bubble
-            // with nothing in it is just visual noise — the error banner
-            // below explains what happened instead.
-            if (!isUser && !text && !isBusy) return null;
+              return (
+                <MessageBubble
+                  key={message.id}
+                  role={isUser ? "user" : "assistant"}
+                  text={text}
+                  sources={extractSources(message.parts)}
+                  pending={isBusy}
+                  timestamp={
+                    isUser
+                      ? userTimestamps[userMessageIds.indexOf(message.id)]
+                      : assistantTimestamps[message.id]
+                  }
+                />
+              );
+            });
+          })()}
 
-            return (
-              <MessageBubble
-                key={message.id}
-                role={isUser ? "user" : "assistant"}
-                text={text}
-                sources={extractSources(message.parts)}
-                pending={isBusy}
-                timestamp={
-                  isUser
-                    ? userTimestamps[userMessageIds.indexOf(message.id)]
-                    : assistantTimestamps[message.id]
-                }
-              />
-            );
-          });
-        })()}
+          {systemError && <SystemErrorBanner message={systemError} onRetry={onRetry} />}
+        </div>
+      )}
 
-        {systemError && <SystemErrorBanner message={systemError} onRetry={onRetry} />}
-      </div>
-
-      <form onSubmit={handleSubmit} className="flex items-center gap-3">
+      <motion.form
+        layout
+        onSubmit={handleSubmit}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        className={`flex items-center gap-3 ${isEmpty ? "mx-auto w-full max-w-2xl" : ""}`}
+      >
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -101,7 +108,7 @@ export function Chat({
         >
           <ArrowUp size={22} />
         </motion.button>
-      </form>
+      </motion.form>
     </div>
   );
 }

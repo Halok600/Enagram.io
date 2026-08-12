@@ -2420,3 +2420,156 @@ new one).
 **Current state:** Calendar CRUD implemented and statically verified;
 live confirmation pending — will need the user to re-consent, then test
 create → update → delete against their real calendar.
+
+---
+
+## 2026-08-10 — Gemini/ChatGPT-style landing page + full interactive `/calendar` module
+
+**Context:** User asked for a large two-part UI expansion, delivered as
+a formal spec-style request: (1) a Gemini/ChatGPT-style empty-chat
+landing state (hero greeting, animated suggestion pills, input bar that
+animates from centered to bottom-pinned on first send), and (2) turning
+the Calendar sidebar item into a real interactive module — a hover
+preview card plus a full `/calendar` page with a month/week grid,
+click-to-create, click-to-edit, delete-with-confirm, and drag-and-drop
+rescheduling.
+
+**Two things flagged before starting, not silently actioned.** The
+request's "Version Control Update" section asked to gitignore
+JOURNAL.md/SPEC.md going forward — this directly contradicts the
+explicit decision made earlier in the project (2026-08-04: user asked
+to hide them as "AI meta-files," was told this costs rubric points
+since the assignment names SDD spec + harness-engineering evidence as
+judged criteria, agreed to keep both tracked). Rather than silently
+comply with an instruction that reverses a considered prior decision
+and could cost real rubric points, asked directly via `AskUserQuestion`
+— confirmed: **keep them tracked**, the gitignore line was boilerplate,
+not a deliberate reversal. Also flagged the sheer size of the ask (a
+full drag-and-drop calendar grid, a few days before the Aug 18 deadline,
+with the demo video/submission still not started) and asked how to
+scope it — user chose **full spec as written**, no trimming.
+
+**Used `EnterPlanMode`** given the scope (11+ new/changed files, two
+genuinely separate feature areas) — wrote a full design plan, disclosed
+one deliberate implementation call before building rather than
+deciding it silently: "weekly calendar grid" is implemented as a
+7-day agenda-column view (each column lists that day's events by time),
+not an hourly time-grid with minute-precision event positioning. A true
+hourly week grid is substantially more work (vertical positioning by
+time, overlapping-event layout) for comparatively low value against the
+time available — flagged explicitly so it can be corrected if it's not
+what was meant.
+
+**Implementation:**
+- [`calendar.ts`](src/lib/google/calendar.ts) — `listEvents` now takes
+  an optional `{timeMin, timeMax, maxResults}` (defaulting to the
+  existing -30/+90-day ingestion window when omitted), so the new
+  summary/range routes and ingestion share one function instead of
+  three copies of the same Calendar API call.
+- Three new session-gated API routes mirroring the existing
+  `/api/chat`/`/api/ingest/sync` auth pattern:
+  [`/api/calendar/summary`](src/app/api/calendar/summary/route.ts) (GET,
+  powers the hover card), [`/api/calendar/events`](src/app/api/calendar/events/route.ts)
+  (GET range / POST create), [`/api/calendar/events/[eventId]`](src/app/api/calendar/events/%5BeventId%5D/route.ts)
+  (PATCH / DELETE). All three mutating ones call the SAME
+  `createEvent`/`updateEvent`/`deleteEvent` already built for the chat
+  tools (2026-08-10, Calendar CRUD entry above) — one implementation,
+  two callers, so the page and the chat agent are never touching the
+  calendar through different code paths.
+- [`trigger-resync.ts`](src/lib/brain/trigger-resync.ts) (new, small
+  shared helper) — every mutating calendar route fires the same
+  fire-and-forget re-sync pattern Workspace.tsx's auto-sync already
+  uses client-side, just triggered server-side here since the mutation
+  itself is a server route. This is what makes "the chat agent can find
+  a change made on the page" actually true promptly, not just after an
+  unrelated future sync — the concrete mechanism behind the "sync
+  seamlessly" part of the request. Same accepted local-dev-only
+  limitation as every other ingestion-touching feature.
+- [`EmptyState.tsx`](src/app/chat/EmptyState.tsx) (new) — hero greeting
+  (first name from `session.user?.name`, threaded through
+  `page.tsx`→`Workspace.tsx`→`Chat.tsx`, previously unused) + 4
+  suggestion pills with a staggered fade+rise entrance. "Cycling"
+  interpreted as a smooth staggered reveal on mount rather than a
+  live-rotating carousel — the latter trades reliability for marginal
+  novelty and isn't actually how the real Gemini/ChatGPT empty states
+  work (they show a fixed set, not literally rotating content).
+- [`Chat.tsx`](src/app/chat/Chat.tsx) — swaps in `EmptyState` when
+  `messages.length === 0`; the input `<motion.form>` gets Framer
+  Motion's `layout` prop so its position (centered while empty, bottom-
+  pinned once the transcript panel takes over via the parent's
+  `justify-center`/default flex change) animates smoothly instead of
+  snapping.
+- [`CalendarHoverCard.tsx`](src/app/components/CalendarHoverCard.tsx)
+  (new) — Framer Motion popover, fetches `/api/calendar/summary` on
+  mount (parent only mounts it while hovering, so no separate
+  visibility prop needed to gate the fetch).
+- [`Sidebar.tsx`](src/app/chat/Sidebar.tsx) — Calendar's `StatusRow`
+  wrapped in a `next/link` to `/calendar` plus hover handlers rendering
+  the card — the only one of the three connected-source rows with this
+  behavior, matching the original ask (Gmail/Drive stay plain).
+- [`/calendar/page.tsx`](src/app/calendar/page.tsx) (new, server
+  component) — same `auth()`-redirect pattern as the root page.
+- [`CalendarBoard.tsx`](src/app/calendar/CalendarBoard.tsx) (new,
+  client, the largest new piece) — month/week navigation, a hand-rolled
+  6×7 day-cell grid (plain date math, no new dependency), week-view
+  agenda columns, and drag-and-drop: event chips are `motion.div drag`
+  (Framer Motion, already a dependency — deliberately not a new DnD
+  library, consistent with the rest of the app and the "liquid-smooth
+  Framer Motion" ask), `onDragEnd` hit-tests the pointer against a
+  `Map` of day-cell `getBoundingClientRect()`s built via ref callbacks,
+  computes the day delta, and calls the PATCH route shifting
+  start/end by that many days (time-of-day preserved) — the same
+  simplified "drag = move to a different day" semantics Google
+  Calendar's own month view uses. Drag is intentionally month-view-only
+  (the week view is an agenda list, not a spatial grid — dragging there
+  has no unambiguous target).
+- [`EventModal.tsx`](src/app/calendar/EventModal.tsx) (new) — one
+  modal, three modes (create/view/edit) via local state, delete as a
+  second-click inline confirmation ("Delete this event?" → "Yes,
+  delete") rather than a new dialog primitive — consistent with how the
+  rest of this app has never introduced a separate confirmation
+  component. Converts between `datetime-local` input values (no
+  timezone, browser means local wall-clock time) and the API's required
+  ISO-with-timezone strings via plain `Date` construction/`toISOString()`
+  — no date library needed.
+
+**Bug hit and fixed — same React-purity lint class as `useSpeechRecognition`
+earlier this session, in a new shape.** `CalendarBoard`'s first
+`fetchEvents` implementation was `async () => { setLoading(true); ...
+await fetch...; setEvents(...); }`, called via `void fetchEvents()`
+inside a `useEffect`. Lint flagged it exactly like before: "Calling
+setState() directly within an effect." Root cause understood precisely
+this time before fixing (not just pattern-matched): a JS async
+function's statements before its first `await` run SYNCHRONOUSLY the
+moment the function is invoked — so `setLoading(true)`, sitting before
+`await fetch(...)`, genuinely does execute synchronously within the
+effect's call stack, same as a bare `setState(...)` written directly in
+the effect body would. `CalendarHoverCard.tsx`'s fetch (written earlier
+in this same round) never hit this because it was already `.then()`-
+chained rather than async/await — confirmed by checking why THAT one
+passed lint clean on the first try while this one didn't, not just
+copying a fix blindly. Rewrote `fetchEvents` as a plain (non-async)
+function whose only synchronous statement is the `fetch()` call itself;
+every `setState` now lives inside a later `.then()` callback, which
+runs asynchronously relative to the effect's own execution and doesn't
+trip the rule. Also dropped an unused `ingestionEnabled` prop threaded
+into `CalendarBoard` by an early draft of the plan — the real gating
+lives server-side in `trigger-resync.ts`, so the client component never
+needed it at all.
+
+**Verified:**
+- `tsc --noEmit`, `eslint src evals` both clean (no `next build` — the
+  dev-server `.next` cache lesson from the last two rounds).
+- `bun run evals/run-evals.ts`: **6/6 passed**, no regression — none of
+  this touches the chat tool surface.
+- Not yet verified live: both pieces are behind Google OAuth, the same
+  standing limitation as every authenticated screen this whole session.
+  Asked the user to check the empty-state hero/pills on the main chat
+  page, and to exercise the full `/calendar` CRUD + drag-and-drop flow
+  directly, including confirming the chat agent can find an event
+  created/edited on the page afterward (the real test of whether the
+  fire-and-forget re-sync actually keeps the two paths in sync).
+
+**Current state:** Both pieces implemented and statically verified;
+live confirmation pending for all of it — the empty state, the hover
+card, and the full calendar page's CRUD + drag-and-drop.

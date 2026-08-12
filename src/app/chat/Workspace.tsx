@@ -49,9 +49,11 @@ function computeActiveTools(messages: UIMessage[]): string[] {
 
 export function Workspace({
   email,
+  name,
   ingestionEnabled,
 }: {
   email: string;
+  name?: string;
   ingestionEnabled: boolean;
 }) {
   // useChat's sendMessage({ messageId }) REPLACES an existing message with
@@ -113,6 +115,7 @@ export function Workspace({
       <Sidebar email={email} activeTools={activeTools} ingestionEnabled={ingestionEnabled} />
       <main className="flex min-w-0 flex-1 flex-col">
         <Chat
+          name={name}
           messages={chat.messages}
           status={chat.status}
           userTimestamps={userTimestamps}
