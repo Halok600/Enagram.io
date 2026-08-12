@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import ReactMarkdown, { type Components } from "react-markdown";
+import { Brain, User } from "lucide-react";
 import { SourceChip, type Source } from "./SourceChip";
 import { ThinkingIndicator } from "./ThinkingIndicator";
 
@@ -36,6 +37,22 @@ function formatTime(timestamp?: number): string {
   return new Date(timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
+function Avatar({ isUser }: { isUser: boolean }) {
+  return (
+    <div
+      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+        isUser ? "bg-[var(--bg-panel-raised)]" : "bg-[var(--accent-soft-bg)]"
+      }`}
+    >
+      {isUser ? (
+        <User size={16} className="text-[var(--text-secondary)]" />
+      ) : (
+        <Brain size={16} className="text-[var(--accent)]" />
+      )}
+    </div>
+  );
+}
+
 export function MessageBubble({
   role,
   text,
@@ -57,36 +74,38 @@ export function MessageBubble({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25, ease: "easeOut" }}
-      className={`flex max-w-[68ch] flex-col gap-1.5 ${
-        isUser ? "self-end items-end" : "self-start items-start"
-      }`}
+      className={`flex max-w-[68ch] items-start gap-2.5 ${isUser ? "self-end flex-row-reverse" : "self-start"}`}
     >
-      <span className="text-xs font-medium text-[var(--text-tertiary)]">
-        {isUser ? "You" : "Brain"} · {formatTime(timestamp)}
-      </span>
+      <Avatar isUser={isUser} />
 
-      <div
-        className={`rounded-[var(--radius-lg)] px-6 py-4 text-base leading-relaxed ${
-          isUser
-            ? "bg-[var(--accent-soft-bg)] text-[var(--text-primary)]"
-            : "border border-[var(--border)] bg-[var(--bg-panel)] text-[var(--text-primary)]"
-        }`}
-      >
-        {text ? (
-          <div>
-            <ReactMarkdown components={markdownComponents}>{text}</ReactMarkdown>
-          </div>
-        ) : pending ? (
-          <ThinkingIndicator />
-        ) : null}
+      <div className={`flex min-w-0 flex-col gap-1.5 ${isUser ? "items-end" : "items-start"}`}>
+        <span className="text-xs font-medium text-[var(--text-tertiary)]">
+          {isUser ? "You" : "Brain"} · {formatTime(timestamp)}
+        </span>
 
-        {!isUser && sources.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2 border-t border-[var(--border)] pt-3">
-            {sources.map((s) => (
-              <SourceChip key={s.slug} source={s} />
-            ))}
-          </div>
-        )}
+        <div
+          className={`rounded-[var(--radius-lg)] px-6 py-4 text-base leading-relaxed ${
+            isUser
+              ? "bg-[var(--accent-soft-bg)] text-[var(--text-primary)]"
+              : "border border-[var(--border)] bg-[var(--bg-panel)] text-[var(--text-primary)]"
+          }`}
+        >
+          {text ? (
+            <div>
+              <ReactMarkdown components={markdownComponents}>{text}</ReactMarkdown>
+            </div>
+          ) : pending ? (
+            <ThinkingIndicator />
+          ) : null}
+
+          {!isUser && sources.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2 border-t border-[var(--border)] pt-3">
+              {sources.map((s) => (
+                <SourceChip key={s.slug} source={s} />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </motion.div>
   );

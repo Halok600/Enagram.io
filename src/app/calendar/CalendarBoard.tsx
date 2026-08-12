@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion, type PanInfo } from "framer-motion";
 import { ChevronLeft, ChevronRight, Plus, ArrowLeft } from "lucide-react";
 import { EventModal, type CalendarEventDTO } from "./EventModal";
@@ -39,6 +39,7 @@ function isToday(date: Date): boolean {
 const MONTH_GRID_WEEKS = 6;
 
 export function CalendarBoard() {
+  const router = useRouter();
   const [viewMode, setViewMode] = useState<ViewMode>("month");
   const [cursor, setCursor] = useState(() => new Date());
   const [events, setEvents] = useState<CalendarEventDTO[]>([]);
@@ -145,13 +146,14 @@ export function CalendarBoard() {
     <div className="flex h-screen w-screen flex-col gap-4 overflow-hidden p-4">
       <header className="flex items-center justify-between gap-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-panel)] px-5 py-3">
         <div className="flex items-center gap-3">
-          <Link
-            href="/"
+          <button
+            type="button"
+            onClick={() => router.push("/")}
             className="flex items-center gap-1.5 rounded-[var(--radius-sm)] px-2 py-1.5 text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-panel-raised)]"
           >
             <ArrowLeft size={16} />
             Back to chat
-          </Link>
+          </button>
           <span className="h-5 w-px bg-[var(--border)]" />
           <button
             type="button"

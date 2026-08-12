@@ -2644,3 +2644,82 @@ briefly rather than either complying or re-running a full
 
 **Current state:** All three tweaks implemented and statically
 verified; live confirmation pending.
+
+---
+
+## 2026-08-10 — Bug fixes + chat avatars + a values check-in on a logo request
+
+**Context:** Three more asks: fix unreliable "Back to chat" navigation
+on `/calendar`, add a theme-aware animated hero logo to the empty
+state, and add avatars to chat messages.
+
+**Declined, with reasoning, rather than silently building it or
+silently swapping in something else:** the request specifically asked
+for "a sleek, glowing, Arkham-style Batman logo" in dark mode. Explained
+directly to the user why this wasn't built as literally specified —
+reproducing DC/Warner Bros' trademarked bat-symbol (and specifically
+referencing the Arkham game franchise's own distinctive art style) into
+a real shipped project, one that may end up in a public portfolio repo,
+is a real IP concern, not just a style preference. Proposed and built
+an alternative that keeps the spirit of the ask (moody, glowing,
+dark-mode-specific flourish) using an ORIGINAL design instead: a simple
+generic bat silhouette (rounded double-curve wings, small ears — the
+same broad territory as the 🦇 emoji, not a copy of anyone's registered
+mark) with a purple glow. Flagged this before building rather than
+either quietly complying or quietly substituting something unrelated
+without explanation.
+
+**"Back to chat" — the stated root cause didn't match the code.** The
+request assumed `router.back()` was in use; it wasn't — the button
+already used `<Link href="/">` since it was first built. Since the
+agent can't reproduce the bug itself (the page is behind Google OAuth,
+same standing limitation as every authenticated screen this session),
+hardened it with the user's own suggested fallback anyway: swapped the
+`Link` for a `<button onClick={() => router.push("/")}>` using
+`useRouter` from `next/navigation`. Noted honestly that if it's still
+unreliable after this, more specific repro details (exact symptom,
+console errors) will be needed rather than further blind guessing — the
+most likely real culprit, unstated but worth having in mind, is some
+interaction with the `PageTransition` `AnimatePresence` wrapper added
+the round before this one, not the originally-assumed cause.
+
+**Implementation:**
+- [`HeroLogo.tsx`](src/app/chat/HeroLogo.tsx) (new) — theme-aware,
+  reads `useTheme()` from `ThemeProvider.tsx`; `AnimatePresence
+  mode="wait"` keyed by theme crossfades between the original bat SVG
+  (dark mode, glowing via a `drop-shadow` filter chain) and a
+  circle-backed Brain icon (light mode, soft indigo shadow, sized/
+  margined to match the existing "high-tech lab" light theme) — same
+  crossfade-by-key pattern already established for
+  `PageTransition.tsx`'s route transitions and
+  `ThemeTransitionOverlay.tsx`'s bridge animation.
+- [`EmptyState.tsx`](src/app/chat/EmptyState.tsx) — renders `HeroLogo`
+  above the greeting.
+- [`CalendarBoard.tsx`](src/app/calendar/CalendarBoard.tsx) — back
+  button hardened as described above.
+- [`MessageBubble.tsx`](src/app/chat/MessageBubble.tsx) — restructured
+  from a stacked label-then-bubble layout into a proper avatar row
+  (`flex items-start gap-2.5`, reversed via `flex-row-reverse` for user
+  messages so the avatar sits on the correct side): a circular
+  lucide-react `User` icon avatar for the user, a circular `Brain` icon
+  avatar (tinted with the accent color) for the assistant, replacing
+  the plain "You"/"Brain" text labels' sole visual identity with a real
+  avatar column alongside them (the text labels stay, now paired with
+  the avatar rather than standing alone).
+
+**Verified:**
+- `tsc --noEmit`, `eslint src evals` clean (one real type error caught
+  and fixed along the way: `BatSilhouette` needed an explicit `style`
+  prop in its type signature — `React.CSSProperties`, matching the
+  existing pattern already used elsewhere in this codebase for typing
+  DOM event/style props without a separate React import, e.g.
+  `Chat.tsx`'s `React.FormEvent`).
+- `bun run evals/run-evals.ts`: **6/6 passed**, no regression.
+- Not yet verified live: the crossfade feel, the avatar layout, and
+  whether the hardened back button actually resolves the navigation
+  issue — all need the user's own browser.
+
+**Current state:** All four items (the IP-conscious logo alternative,
+avatars, the back-button hardening, and confirming HeroLogo's crossfade
+reads well) implemented and statically verified; live confirmation
+pending.

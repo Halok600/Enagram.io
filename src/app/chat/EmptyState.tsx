@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Mail, HardDrive, CalendarDays, Sparkles } from "lucide-react";
+import { HeroLogo } from "./HeroLogo";
 
 const SUGGESTIONS = [
   { text: "What's my status on the SkillLayer application?", icon: Sparkles },
@@ -19,6 +20,7 @@ export function EmptyState({ name, onSend }: { name?: string; onSend: (text: str
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-8 text-center">
+      <HeroLogo />
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
