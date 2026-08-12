@@ -1,4 +1,4 @@
-# Eval run — 2026-08-12T18:24:33.086Z
+# Eval run — 2026-08-12T18:56:02.237Z
 
 Model: `gemini-flash-lite-latest` · Cases: 6 · Passed: 6/6
 
@@ -14,9 +14,9 @@ Model: `gemini-flash-lite-latest` · Cases: 6 · Passed: 6/6
 
 **Answer:**
 
-> I couldn't find any email from Stripe about a failed payment in your connected Gmail account.
+> I couldn't find any email from Stripe about a failed payment in your connected Gmail data.
 
-_30.3s_
+_29.6s_
 
 ---
 
@@ -32,13 +32,11 @@ _30.3s_
 
 **Answer:**
 
-> Based on your recent Drive activity, the file you edited or worked on within the last week is:
+> In the last week (specifically modified/edited on August 11, 2026), you edited or interacted with the following Drive file:
 > 
-> * [skilllayer_sde_I_takehome](https://docs.google.com/document/d/137QC0GmLIakjGt0jV6tlSSUVmnarqjZny34E0YR0vCA/edit?usp=drivesdk) (last modified August 11, 2026)
-> 
-> The other files in your Drive ([GoMarble_Growth_Intern_JD](https://docs.google.com/document/d/1tJA2nv9iqB3Irs-aK76fV83HfNhQuQYBUWbAlOjsf84/edit?usp=drivesdk) and the Reddit insights text file) have older timestamps from June and March respectively.
+> * [skilllayer_sde_I_takehome](https://docs.google.com/document/d/137QC0GmLIakjGt0jV6tlSSUVmnarqjZny34E0YR0vca/edit?usp=drivesdk)
 
-_10.8s_
+_20.2s_
 
 ---
 
@@ -54,14 +52,13 @@ _10.8s_
 
 **Answer:**
 
-> Your most recent email thread with Nirmit from SkillLayer is titled [SHORTLISTED STUDENTS](https://mail.google.com/mail/u/0/#all/19fc76dd1908a913). 
+> Your most recent email thread with Nirmit from SkillLayer is about the **MC Round recruitment process** for the **Software Development Engineer I** role [SHORTLISTED STUDENTS](https://mail.google.com/mail/u/0/#all/19fc76dd1908a913). 
 > 
-> Here is a summary of the thread:
-> * **The Opportunity:** You were congratulated and shortlisted for the **MC Round** of the recruitment process for the Software Development Engineer I position at skillLayer.
-> * **Take-Home Assignment:** Nirmit shared the [skilllayer_sde_I_takehome](https://docs.google.com/document/d/137QC0GmLIakjGt0jV6tlSSUVmnarqjZny34E0YR0vCA/edit?tab=t.0) document containing instructions and the timeline for Round 1.
-> * **Your Reply:** You confirmed receipt and let Nirmit know that you would submit the take-home assignment by Friday ([Re: SHORTLISTED STUDENTS](https://mail.google.com/mail/u/0/#all/19fe7a1461637a85)).
+> Here are the key details from the thread:
+> * **Shortlisting:** You were congratulated and shortlisted for the MC Round, with a take-home assignment shared via [Google Docs](https://docs.google.com/document/d/137QC0GmLIakjGt0jV6tlSSUVmnarqjZny34E0YR0vCA/edit?tab=t.0) [SHORTLISTED STUDENTS](https://mail.google.com/mail/u/0/#all/19fc76dd1908a913).
+> * **Your Reply:** You confirmed to Nirmit that you would have the take-home assignment submitted by Friday [Re: SHORTLISTED STUDENTS](https://mail.google.com/mail/u/0/#all/19fe7a1461637a85).
 
-_10.7s_
+_20.2s_
 
 ---
 
@@ -77,14 +74,12 @@ _10.7s_
 
 **Answer:**
 
-> Here is your status on the SkillLayer application and take-home assignment:
+> Your status on the **SkillLayer** application and take-home assignment:
 > 
-> * **Application Status:** You applied for the **Software Development Engineer I** remote position on August 1, 2026 ([Application for Software Development Engineer I](https://mail.google.com/mail/u/0/#all/19fbdf415706daa2)). You were subsequently shortlisted for the **MC Round** (communicated via [SHORTLISTED STUDENTS](https://mail.google.com/mail/u/0/#all/19fc76dd1908a913) on August 3, 2026).
-> * **Take-Home Assignment:** Yes, the take-home assignment document is in your Drive and was shared with you by Nirmit from SkillLayer ([skilllayer_sde_I_takehome](https://docs.google.com/document/d/137QC0GmLIakjGt0jV6tlSSUVmnarqjZny34E0YR0vCA/edit?usp=drivesdk)). 
->   * **Task:** Build a "Personal Brain" conversational agent over your own personal data.
->   * **Deadline:** The deadline was originally August 10, 2026 at 12 PM, but was updated/extended to **August 17, 2026 at 12 PM** to be submitted via the same email thread to `nirmit@skilllayer.tech` (CCing `cristian@skilllayer.tech`).
+> * **Status:** You have been successfully shortlisted for the **MC Round** of the recruitment process for the Software Development Engineer I position [SHORTLISTED STUDENTS](https://mail.google.com/mail/u/0/#all/19fc76dd1908a913).
+> * **Take-Home Assignment:** Yes, the take-home document is available in your Drive as **[skilllayer_sde_I_takehome](https://docs.google.com/document/d/137QC0GmLIakjGt0jV6tlSSUVmnarqjZny34E0YR0vCA/edit?usp=drivesdk)** [Document shared with you: "skilllayer_sde_I_takehome"](https://mail.google.com/mail/u/0/#all/19fdc9cd0ba7c0ea). The assignment asks you to build a "Personal Brain" conversational agent over your own personal data supporting cross-source reasoning and spec-driven development (SDD) [skilllayer_sde_I_takehome](https://docs.google.com/document/d/137QC0GmLIakjGt0jV6tlSSUVmnarqjZny34E0YR0vCA/edit?usp=drivesdk).
 
-_11.5s_
+_22.4s_
 
 ---
 
@@ -102,7 +97,7 @@ _11.5s_
 
 > No, I couldn't find any calendar events related to an offsite in Antarctica in your connected calendar.
 
-_19.7s_
+_19.9s_
 
 ---
 
@@ -112,14 +107,14 @@ _19.7s_
 
 **Checks:** SPEC.md §5 Tier2 #2. Grounding check: no such exchange exists — must search BOTH sources (not just Gmail) before correctly reporting not found.
 
-**Tools used:** search_gmail, search_drive, find_related — expected [search_gmail, search_drive] — OK
+**Tools used:** search_gmail, search_drive — expected [search_gmail, search_drive] — OK
 
 **Content check:** OK
 
 **Answer:**
 
-> I couldn't find any record of sending a contract draft to Priya (or any emails/documents mentioning Priya and a contract) in your connected Gmail or Google Drive data.
+> I couldn't find any mention of "Priya" or a contract draft in your connected Gmail and Google Drive data.
 
-_28.5s_
+_47.7s_
 
 ---

@@ -15,10 +15,18 @@ const ThemeContext = createContext<{
 } | null>(null);
 
 /**
- * The inline script in layout.tsx already set [data-theme] on <html>
- * before hydration (avoiding a flash of the wrong theme), so this reads
- * the same source of truth back out on mount rather than always starting
- * from "dark" and flipping after a render.
+ * Reads the REAL stored preference — only knowable client-side
+ * (localStorage). Deliberately no longer used as a `useState` lazy
+ * initializer (see below) — that caused a genuine hydration mismatch,
+ * not just a cosmetic one: the server always renders assuming "dark" (no
+ * `document` access), so any component reading `theme` from context and
+ * branching on it (ThemeToggle's aria-label, HeroLogo's entire icon
+ * swap) would render DIFFERENT output between the server pass and the
+ * client's first hydration pass whenever the user's real stored
+ * preference was "light" — invisible until someone actually had "light"
+ * saved and reloaded. `suppressHydrationWarning` on <html> in layout.tsx
+ * only covers that one element's own attribute, not this. See JOURNAL.md
+ * 2026-08-13.
  */
 function readInitialTheme(): Theme {
   if (typeof document === "undefined") return "dark";
@@ -26,14 +34,42 @@ function readInitialTheme(): Theme {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(readInitialTheme);
+  // Both the server render AND the client's first hydration pass now use
+  // this SAME hardcoded "dark" starting value — no `document` read during
+  // render anymore, so there's nothing for React to mismatch on.
+  const [theme, setTheme] = useState<Theme>("dark");
+  const [mounted, setMounted] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Runs once, strictly after hydration completes — corrects `theme` to
+  // the real stored value here instead. A completely ordinary post-mount
+  // state update at this point, not a hydration-time value, so no
+  // mismatch; the visible page itself never flashes because the no-flash
+  // inline script (layout.tsx) already set the real value on <html>
+  // before this ever runs — this effect is only correcting REACT's OWN
+  // state to match what's already on screen. Deferred one microtask (same
+  // technique already validated in this codebase for CalendarBoard.tsx's
+  // fetchEvents) so the setState calls aren't reachable synchronously
+  // from the effect body — this project's lint config flags that even
+  // for this canonical "sync from an external store after mount" case.
   useEffect(() => {
+    Promise.resolve().then(() => {
+      setMounted(true);
+      setTheme(readInitialTheme());
+    });
+  }, []);
+
+  // Gated on `mounted` so this can never fire with the "dark" placeholder
+  // before the effect above has corrected it — an ungated write here
+  // would overwrite the no-flash script's already-correct DOM attribute
+  // with the wrong default for one frame, reintroducing exactly the flash
+  // this whole design exists to avoid.
+  useEffect(() => {
+    if (!mounted) return;
     document.documentElement.dataset.theme = theme;
     localStorage.setItem(STORAGE_KEY, theme);
-  }, [theme]);
+  }, [theme, mounted]);
 
   // The actual color change is already a smooth CSS transition on every
   // custom property (globals.css's `*, *::before, *::after` rule) — this

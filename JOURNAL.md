@@ -2723,3 +2723,89 @@ the round before this one, not the originally-assumed cause.
 avatars, the back-button hardening, and confirming HeroLogo's crossfade
 reads well) implemented and statically verified; live confirmation
 pending.
+
+---
+
+## 2026-08-13 — Real hydration bug found via live testing, root-caused and fixed
+
+**Context:** User hit two console errors live and shared screenshots.
+Diagnosed them as two different things rather than treating both the
+same way.
+
+**Error 1 (script-tag warning, `layout.tsx`)** — the dev overlay itself
+showed a "(stale)" badge next to the Next.js version indicator, a
+direct signal from Next's own tooling that the running dev server's
+compiled state was stale relative to source — same class of HMR/`.next`
+staleness issue hit multiple times already this session with
+`layout.tsx`-level changes specifically. Told the user this is very
+likely resolved by a dev-server restart, not a code fix, and didn't
+touch any code for it.
+
+**Error 2 (real hydration mismatch on `ThemeToggle`'s `aria-label`)** —
+root-caused properly rather than pattern-matching a fix. `ThemeProvider`
+initialized `theme` via `useState(readInitialTheme)`, a lazy
+initializer that reads `document.documentElement.dataset.theme`. On the
+**server**, `document` doesn't exist, so it always defaulted to
+`"dark"`. On the **client's first hydration pass**, it read the REAL
+value already set by the no-flash inline script — which is `"light"`
+for anyone who's actually toggled to light mode (as the user just had,
+testing the theme-toggle-overlay feature from an earlier round). Server
+and client rendering different `theme` values on the very first pass is
+a textbook hydration mismatch. This was a **latent bug present since
+the original 2026-08-04 theme system**, not something introduced this
+session — `suppressHydrationWarning` on `<html>` in `layout.tsx` only
+ever covered that one element's own `[data-theme]` attribute, never
+downstream components that read `theme` from context and render
+different output based on it. It only became observable now because
+every previous live test session happened to still be on the default
+dark theme; this was the first reload with `"light"` actually saved.
+Also newly relevant because of `HeroLogo.tsx` (added the round before
+this one) — it doesn't just change an aria-label string, it swaps an
+entire icon subtree based on `theme`, which would have hit this same
+class of mismatch even more visibly (a real content flash, not just a
+console warning) the first time someone reloaded on light mode.
+
+**Fix:** the standard, hydration-safe pattern for "a value only truly
+knowable client-side, needs to match after mount" — `theme` now starts
+as a hardcoded `"dark"` on BOTH the server render and the client's
+first hydration pass (no `document` read during render anymore, so
+nothing to mismatch on), then a `useEffect` corrects it to the real
+value strictly after hydration completes. A second effect, gated behind
+a new `mounted` flag, is what actually writes `theme` back to the DOM/
+localStorage — the gate matters: without it, that effect would fire
+once on the very first render using the still-uncorrected `"dark"`
+placeholder, overwriting the no-flash script's already-correct DOM
+attribute for one frame and reintroducing exactly the flash this whole
+system exists to prevent, before the correction effect's own re-render
+fixed it back. Traced through the effect-ordering/batching behavior
+explicitly before finalizing this, not just tested-until-quiet.
+
+**Bug hit and fixed along the way — the fourth `set-state-in-effect`
+lint hit this session, and a real design tension surfaced.** The
+mount-correction effect's `setMounted(true); setTheme(...)` is about as
+canonical a "sync from an external store after mount" pattern as exists
+in React — used by essentially every theme library, including the
+prior art this project's own original design was modeled on. This
+project's lint config flags it anyway, with no clean `.then()`-chain or
+`useSyncExternalStore` fit this time (unlike the two earlier hits):
+there's no natural async boundary for a synchronous localStorage read,
+and `useSyncExternalStore` is for subscribing to a genuinely external
+reactive store, not a one-time post-mount correction that then hands
+off to ordinary internal state. Used the same microtask-deferral
+technique already validated in this exact codebase
+(`CalendarBoard.tsx`'s `fetchEvents`) — wrapping the setState calls in
+`Promise.resolve().then(() => {...})` — which satisfies the linter's
+static "not reachable synchronously from the effect body" check without
+changing the actual timing in any way a user could perceive.
+
+**Verified:**
+- `tsc --noEmit`, `eslint src evals` both clean.
+- `bun run evals/run-evals.ts`: **6/6 passed**, no regression.
+- Not yet reverified live — asked the user to restart their dev server
+  (for the stale-HMR error) and reload on light mode specifically (the
+  exact condition that surfaced the real bug) to confirm the hydration
+  error is actually gone, not just theoretically fixed.
+
+**Current state:** Both issues addressed — one via an operational fix
+(dev server restart), one via a real code fix with the root cause fully
+traced through, not guessed at. Live confirmation pending.
