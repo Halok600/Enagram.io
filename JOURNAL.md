@@ -2573,3 +2573,74 @@ needed it at all.
 **Current state:** Both pieces implemented and statically verified;
 live confirmation pending for all of it — the empty state, the hover
 card, and the full calendar page's CRUD + drag-and-drop.
+
+---
+
+## 2026-08-10 — Final UI polish: theme transition, page transitions, external source links
+
+**Context:** Three smaller, well-specified tweaks to close out the UI
+work: a more premium theme-toggle animation, animated route transitions
+between chat and `/calendar`, and making the Gmail/Drive sidebar rows
+open the real Gmail/Drive apps in a new tab. Well-specified enough
+(clear single approach per item, few files) that this round skipped
+`EnterPlanMode` and went straight to implementation, unlike the last
+two larger rounds.
+
+**Flagged, not silently actioned, again:** the request's "Version
+Control Update" section again asked to gitignore JOURNAL.md/SPEC.md —
+the same line from the previous round, already explicitly resolved
+there (user confirmed: keep tracked, it's boilerplate). Noted this
+briefly rather than either complying or re-running a full
+`AskUserQuestion` cycle a second time for something already decided.
+
+**Implementation:**
+- [`ThemeTransitionOverlay.tsx`](src/app/ThemeTransitionOverlay.tsx)
+  (new) — a fixed, full-screen, `pointer-events-none` overlay: a
+  radial purple/indigo-tinted gradient fades in behind a centered
+  lucide-react `Brain` icon (no brand logo asset exists in this
+  project, so the existing thematically-apt icon stands in rather than
+  inventing a new asset) that scales in with a slight overshoot easing.
+  Purely decorative — the actual color change was already a smooth CSS
+  transition on every custom property since the very first dark/light
+  rollout (2026-08-04's `*, *::before, *::after { transition:
+  background-color... }` rule); this bridges that transition with a
+  deliberate flourish rather than being what makes the colors change.
+- [`ThemeProvider.tsx`](src/app/ThemeProvider.tsx) — `toggleTheme` now
+  also flips a `isTransitioning` state (with a ref-tracked timeout so
+  rapid re-toggles reset cleanly instead of stacking), rendered via
+  `AnimatePresence` as a sibling to `children` so the overlay covers
+  the full viewport regardless of where the toggle button sits in the
+  tree. All of this lives in a real click handler, not an effect — no
+  "setState in effect" lint concern here, unlike the last two rounds'
+  fixes.
+- [`PageTransition.tsx`](src/app/PageTransition.tsx) (new) — wraps
+  `{children}` in `layout.tsx`, keyed by `usePathname()` so
+  `AnimatePresence` treats each route as a distinct element to
+  cross-fade between (fade + 8px slide, `mode="wait"`) — the standard
+  pattern for route transitions in the App Router, since Next's own
+  navigation swaps `children` outright with no animation of its own.
+- [`Sidebar.tsx`](src/app/chat/Sidebar.tsx) — new
+  `ExternalStatusLink` wraps the Gmail/Drive `StatusRow`s in plain
+  `<a href="https://mail.google.com"/"https://drive.google.com"
+  target="_blank" rel="noopener noreferrer">` (a real `<a>`, not
+  `next/link`, since these are external URLs — `next/link` is for
+  internal routing). `rel="noopener noreferrer"` isn't just following
+  the request literally — it's the correct security practice for any
+  new-tab external link (stops the opened tab from reaching back via
+  `window.opener`), already how this project treats every other
+  external link (citation URLs, the Calendar hover card's "Open in
+  Google Calendar"). Calendar's row is unchanged (still the one
+  internal `next/link` + hover-card row).
+
+**Verified:**
+- `tsc --noEmit`, `eslint src evals` clean (confirms `Brain` exists in
+  lucide-react's icon set as a side effect — no separate check needed).
+- `bun run evals/run-evals.ts`: **6/6 passed**, no regression — none of
+  this touches the chat tool surface.
+- Not yet verified live: the overlay's actual animation feel, the
+  route-transition smoothness, and that the Gmail/Drive links open the
+  right destinations — all need the user's own browser, same standing
+  limitation as every visual feature this session.
+
+**Current state:** All three tweaks implemented and statically
+verified; live confirmation pending.

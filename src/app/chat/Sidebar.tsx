@@ -48,8 +48,20 @@ function StatusRow({ icon: Icon, label }: { icon: typeof Mail; label: string }) 
   );
 }
 
-/** The only one of the three connected-source rows that links out and
- * shows a hover preview — Gmail/Drive stay plain `StatusRow`s. */
+/** Gmail/Drive rows open the real app in a new tab — external URLs, so a
+ * plain anchor (not next/link, which is for internal routing) with the
+ * standard target="_blank" rel="noopener noreferrer" pairing (noopener
+ * stops the new tab from reaching back via window.opener). */
+function ExternalStatusLink({ href, icon, label }: { href: string; icon: typeof Mail; label: string }) {
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" className="block">
+      <StatusRow icon={icon} label={label} />
+    </a>
+  );
+}
+
+/** The only one of the three connected-source rows that links internally
+ * and shows a hover preview — Gmail/Drive open the real app externally. */
 function CalendarStatusRow() {
   const [isHovering, setIsHovering] = useState(false);
 
@@ -128,8 +140,8 @@ export function Sidebar({
           <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)]">
             Connected sources
           </h2>
-          <StatusRow icon={Mail} label="Gmail" />
-          <StatusRow icon={HardDrive} label="Drive" />
+          <ExternalStatusLink href="https://mail.google.com" icon={Mail} label="Gmail" />
+          <ExternalStatusLink href="https://drive.google.com" icon={HardDrive} label="Drive" />
           <CalendarStatusRow />
         </section>
 
