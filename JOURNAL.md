@@ -2809,3 +2809,51 @@ changing the actual timing in any way a user could perceive.
 **Current state:** Both issues addressed — one via an operational fix
 (dev server restart), one via a real code fix with the root cause fully
 traced through, not guessed at. Live confirmation pending.
+
+---
+
+## 2026-08-13 — Real navigation bug: AnimatePresence mode="wait" could hang between pages
+
+**Context:** User hit a genuine bug live: navigating `/calendar` → back
+to chat updated the address bar to `localhost:3000` correctly (so
+Next's router itself worked, confirming the earlier back-button
+hardening was fine) but rendered a completely blank dark page instead
+of the chat interface.
+
+**Root cause:** `PageTransition.tsx` (added two rounds ago) used
+`AnimatePresence mode="wait"` keyed by pathname — by design, that mode
+holds off mounting the INCOMING page until the OUTGOING page's exit
+animation has fully resolved. `/calendar`'s content is complex enough
+(drag-and-drop event chips as individually-draggable `motion.div`s, an
+`EventModal` with its own nested `AnimatePresence` for the delete-
+confirm step) that its exit could plausibly never cleanly signal
+"complete" back to the parent `AnimatePresence` — leaving the router
+already pointed at the new URL with nothing rendered, exactly matching
+the reported symptom. A known, real risk class for `mode="wait"` +
+non-trivial page content, not a hypothetical.
+
+**Fix:** removed `AnimatePresence`/`mode="wait"`/the `exit` variant
+entirely. `PageTransition` now just wraps `{children}` in a
+`motion.div` keyed by `pathname` with only an `initial`/`animate`
+entrance (no exit tracking at all) — `key={pathname}` still forces a
+real unmount+mount so the entrance animation replays every navigation,
+but the actual swap is now a normal, synchronous, uncoordinated React
+reconciliation with nothing to get stuck waiting on. Trades the full
+crossfade (old page visibly exiting) for a plainer fade-in on arrival
+only. Reliability of a core navigation path matters far more than that
+extra polish, especially days before a graded submission.
+
+**Verified:**
+- `tsc --noEmit`, `eslint src evals` clean.
+- `bun run evals/run-evals.ts`: **6/6 passed**, no regression.
+- Not yet reverified live — this diagnosis is the most plausible
+  explanation given the evidence (URL correct, content blank, recently-
+  added complex nested-motion component involved) but wasn't directly
+  reproduced by the agent, same standing limitation as every
+  authenticated-page bug this session. Asked the user to retest the
+  exact `/calendar` → back navigation that broke, plus a hard refresh
+  first in case any stale HMR state from the very recent edit is also
+  in play.
+
+**Current state:** Navigation-breaking bug fixed via a materially safer
+(if slightly less flashy) implementation; live confirmation pending.
