@@ -2857,3 +2857,45 @@ extra polish, especially days before a graded submission.
 
 **Current state:** Navigation-breaking bug fixed via a materially safer
 (if slightly less flashy) implementation; live confirmation pending.
+
+---
+
+## 2026-08-13 — Resolved: the recurring `Math.sumPrecise` warning
+
+**Context:** The `Warning: TypeError: Math.sumPrecise is not a function`
+noise seen repeatedly in the local dev terminal since earlier in the
+project (first noted in passing around the auto-sync/lock-handling work,
+never actually chased down) — user asked to remove it for real this time.
+
+**Diagnosis before acting:** searched gbrain's own cached source
+(`src/` in the bun install cache) for `sumPrecise` — zero matches,
+meaning it wasn't gbrain's own first-party code calling it. `Math.sumPrecise`
+is a genuinely very new TC39 proposal; the warning's phrasing and the
+fact that it fires on every local `sync`/ingest call pointed at Bun's
+own runtime internals or a bundled dependency inside the compiled
+`gbrain.exe`, not anything in this project's application code — nothing
+here was ever going to be fixable by editing our own `src/`.
+
+**Fix:** `gbrain self-upgrade` — 0.42.72.1 → 0.45.9.0 (gbrain's own CLI
+had been flagging this exact upgrade as available throughout the whole
+project, e.g. "UPGRADE_AVAILABLE... Run: gbrain self-upgrade" in
+earlier sync logs, just never acted on since it wasn't blocking
+anything). Verified directly and conclusively via the local CLI — no
+browser session needed for this one, since it's purely a local
+ingestion-path tool, not something touching the remote search server:
+ran `gbrain sync --source personal-brain` from `brain/` post-upgrade,
+confirmed a completely clean run with zero warnings of any kind. The
+`UPGRADE_AVAILABLE` nag disappeared too, as a side effect of now
+actually being current.
+
+**Scope note:** this only touched the local `gbrain.exe` binary — a dev
+tool, not a tracked source file, so no code changed and there's nothing
+to commit for the actual fix. The remote Render-hosted gbrain instance
+(used for search/chat) is a separate deployment on its own version;
+this local upgrade doesn't touch it, and there's no evidence the same
+warning affects it (it would surface in Render's own server logs, not
+the local terminal, and nothing in this session's testing has pointed
+at it being an issue there).
+
+**Current state:** Resolved and directly verified, not just
+theoretically fixed.
