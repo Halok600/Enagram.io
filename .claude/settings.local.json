@@ -1,7 +1,26 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx --yes create-next-app@latest . --typescript --eslint --tailwind --app --src-dir --import-alias \"@/*\" --use-npm --no-turbopack --disable-git)"
+      "Bash(npx --yes create-next-app@latest . --typescript --eslint --tailwind --app --src-dir --import-alias \"@/*\" --use-npm --no-turbopack --disable-git)",
+      "PowerShell($env:PATH += \";C:\\\\Users\\\\lenovo\\\\.bun\\\\bin\"; cd \"D:\\\\Projects\\\\PROJECT_MAIN_AI\\\\brain\"; gbrain config show 2>&1 | Select-String \"embed|model\")",
+      "Bash(npx tsc *)",
+      "Bash(npm install *)",
+      "Bash(gbrain migrate *)",
+      "WebFetch(domain:auth0.com)",
+      "Bash(rm -rf .next)",
+      "Bash(npx next *)",
+      "Bash(npx eslint *)",
+      "Bash(bun run *)",
+      "Bash(git commit -m ' *)",
+      "Bash(grep -rl \"\\\\\"extract_facts\\\\\"\\\\|'extract_facts'\" \"C:\\\\Users\\\\lenovo/.bun/install/cache/@GH@garrytan-gbrain-82fe021@@@1/src\" 2>/dev/null)",
+      "Bash(grep -rn \"compiled_truth\" \"C:\\\\Users\\\\lenovo/.bun/install/cache/@GH@garrytan-gbrain-82fe021@@@1/src/commands/get.ts\" \"C:\\\\Users\\\\lenovo/.bun/install/cache/@GH@garrytan-gbrain-82fe021@@@1/docs\" 2>/dev/null | head -20)",
+      "Bash(git add *)",
+      "Bash(git push *)",
+      "Bash(grep -rl \"sumPrecise\" \"C:\\\\Users\\\\lenovo/.bun/install/cache/@GH@garrytan-gbrain-82fe021@@@1\" 2>/dev/null | head -10)",
+      "Bash(bun --version)",
+      "Bash(netstat -ano)",
+      "Bash(git diff *)",
+      "Bash(grep -v \"\\\\.map$\")"
     ]
   }
 }

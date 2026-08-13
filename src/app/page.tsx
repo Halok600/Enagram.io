@@ -34,8 +34,8 @@ function LoginScreen() {
           Personal Brain
         </h1>
         <p className="text-lg text-[var(--text-secondary)]">
-          Connect your Google account to let the brain read your Gmail, Drive, and
-          Calendar (read-only).
+          Connect your Google account to let the brain read your Gmail and Drive,
+          and read, create, and manage your Calendar.
         </p>
         <form
           action={async () => {

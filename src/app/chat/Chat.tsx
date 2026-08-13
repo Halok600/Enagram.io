@@ -42,7 +42,7 @@ export function Chat({
   return (
     <div className={`flex h-full flex-1 flex-col gap-5 ${isEmpty ? "justify-center" : ""}`}>
       {isEmpty ? (
-        <EmptyState name={name} onSend={onSend} />
+        <EmptyState name={name} onSend={onSend} isBusy={isBusy} />
       ) : (
         <div className="flex flex-1 flex-col gap-6 overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-panel)] p-8">
           {(() => {

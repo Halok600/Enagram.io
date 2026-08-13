@@ -7,7 +7,7 @@ import {
   streamText,
   type UIMessage,
 } from "ai";
-import { auth } from "@/auth";
+import { requireSession } from "@/lib/auth-guard";
 import { createBrainTools } from "@/lib/query/tools";
 import { CHAT_MODEL_ID, getSystemPrompt } from "@/lib/query/config";
 import { getPreferences } from "@/lib/brain/gbrain-remote";
@@ -50,10 +50,8 @@ function friendlyErrorMessage(error: unknown): string {
 
 export async function POST(req: Request) {
   try {
-    const session = await auth();
-    if (!session?.accessToken) {
-      return new Response(JSON.stringify({ error: "Not authenticated" }), { status: 401 });
-    }
+    const { session, error } = await requireSession();
+    if (error) return error;
 
     const { messages }: { messages: UIMessage[] } = await req.json();
     const preferences = await getPreferences();

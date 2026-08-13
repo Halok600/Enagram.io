@@ -1,22 +1,18 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { auth } from "@/auth";
+import { requireSession } from "@/lib/auth-guard";
 import { updateEvent, deleteEvent } from "@/lib/google/calendar";
 import { triggerResync } from "@/lib/brain/trigger-resync";
+import { friendlyGoogleErrorMessage } from "@/lib/google/friendly-error";
 
 type RouteContext = { params: Promise<{ eventId: string }> };
 
 export async function PATCH(req: NextRequest, { params }: RouteContext) {
-  const session = await auth();
-  if (!session?.accessToken) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-  if (session.error) {
-    return NextResponse.json({ error: session.error }, { status: 401 });
-  }
+  const { session, error } = await requireSession();
+  if (error) return error;
 
   const { eventId } = await params;
   const body = await req.json();
-  const { summary, startDateTime, endDateTime, description, location } = body ?? {};
+  const { summary, startDateTime, endDateTime, description, location, allDay } = body ?? {};
 
   try {
     const event = await updateEvent(session.accessToken, {
@@ -26,32 +22,34 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
       endDateTime,
       description,
       location,
+      allDay,
     });
-    triggerResync(new URL(req.url).origin, !process.env.VERCEL);
+    triggerResync(new URL(req.url).origin, !process.env.VERCEL, req.headers.get("cookie"));
     return NextResponse.json({ event });
   } catch (err) {
     console.error("Calendar event update failed", err);
-    return NextResponse.json({ error: "Failed to update calendar event" }, { status: 500 });
+    return NextResponse.json(
+      { error: friendlyGoogleErrorMessage(err) ?? "Failed to update calendar event" },
+      { status: 500 },
+    );
   }
 }
 
 export async function DELETE(req: NextRequest, { params }: RouteContext) {
-  const session = await auth();
-  if (!session?.accessToken) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-  if (session.error) {
-    return NextResponse.json({ error: session.error }, { status: 401 });
-  }
+  const { session, error } = await requireSession();
+  if (error) return error;
 
   const { eventId } = await params;
 
   try {
     await deleteEvent(session.accessToken, eventId);
-    triggerResync(new URL(req.url).origin, !process.env.VERCEL);
+    triggerResync(new URL(req.url).origin, !process.env.VERCEL, req.headers.get("cookie"));
     return NextResponse.json({ status: "deleted" });
   } catch (err) {
     console.error("Calendar event delete failed", err);
-    return NextResponse.json({ error: "Failed to delete calendar event" }, { status: 500 });
+    return NextResponse.json(
+      { error: friendlyGoogleErrorMessage(err) ?? "Failed to delete calendar event" },
+      { status: 500 },
+    );
   }
 }

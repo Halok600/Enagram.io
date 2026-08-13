@@ -12,6 +12,14 @@ const TRANSITION_OVERLAY_MS = 550;
 const ThemeContext = createContext<{
   theme: Theme;
   toggleTheme: () => void;
+  /** False until the post-mount correction effect below has run. Consumers
+   * that branch their RENDERED OUTPUT on `theme` (HeroLogo's icon choice,
+   * ThemeToggle's thumb position) should wait for `mounted` before showing
+   * anything theme-dependent — otherwise a user whose real preference is
+   * "light" sees the hardcoded "dark" version fully painted and then
+   * watches it visibly animate away once `theme` corrects, instead of just
+   * seeing the right thing appear once. */
+  mounted: boolean;
 } | null>(null);
 
 /**
@@ -48,11 +56,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // mismatch; the visible page itself never flashes because the no-flash
   // inline script (layout.tsx) already set the real value on <html>
   // before this ever runs — this effect is only correcting REACT's OWN
-  // state to match what's already on screen. Deferred one microtask (same
-  // technique already validated in this codebase for CalendarBoard.tsx's
-  // fetchEvents) so the setState calls aren't reachable synchronously
-  // from the effect body — this project's lint config flags that even
-  // for this canonical "sync from an external store after mount" case.
+  // state to match what's already on screen. Unlike CalendarBoard.tsx's
+  // fetchEvents, there's no real async work here — the microtask wrapper
+  // is a deliberate no-op deferral purely to get these setState calls off
+  // the effect's own call stack, because this project's lint config
+  // (react-hooks/set-state-in-effect) flags ANY setState synchronously
+  // reachable from an effect body, including this canonical "sync from an
+  // external store after mount" case.
   useEffect(() => {
     Promise.resolve().then(() => {
       setMounted(true);
@@ -85,7 +95,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, mounted }}>
       {children}
       <AnimatePresence>{isTransitioning && <ThemeTransitionOverlay />}</AnimatePresence>
     </ThemeContext.Provider>

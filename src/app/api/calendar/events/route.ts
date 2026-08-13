@@ -1,17 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { auth } from "@/auth";
+import { requireSession } from "@/lib/auth-guard";
 import { listEvents, createEvent } from "@/lib/google/calendar";
 import { triggerResync } from "@/lib/brain/trigger-resync";
+import { friendlyGoogleErrorMessage } from "@/lib/google/friendly-error";
 
 /** Lists events for whatever month/week the /calendar page currently has displayed. */
 export async function GET(req: NextRequest) {
-  const session = await auth();
-  if (!session?.accessToken) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-  if (session.error) {
-    return NextResponse.json({ error: session.error }, { status: 401 });
-  }
+  const { session, error } = await requireSession();
+  if (error) return error;
 
   const { searchParams } = new URL(req.url);
   const start = searchParams.get("start");
@@ -25,21 +21,19 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ events });
   } catch (err) {
     console.error("Calendar range fetch failed", err);
-    return NextResponse.json({ error: "Failed to load calendar events" }, { status: 500 });
+    return NextResponse.json(
+      { error: friendlyGoogleErrorMessage(err) ?? "Failed to load calendar events" },
+      { status: 500 },
+    );
   }
 }
 
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.accessToken) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-  if (session.error) {
-    return NextResponse.json({ error: session.error }, { status: 401 });
-  }
+  const { session, error } = await requireSession();
+  if (error) return error;
 
   const body = await req.json();
-  const { summary, startDateTime, endDateTime, description, location } = body ?? {};
+  const { summary, startDateTime, endDateTime, description, location, allDay } = body ?? {};
   if (!summary || !startDateTime || !endDateTime) {
     return NextResponse.json({ error: "summary, startDateTime, and endDateTime are required" }, { status: 400 });
   }
@@ -51,11 +45,15 @@ export async function POST(req: NextRequest) {
       endDateTime,
       description,
       location,
+      allDay: Boolean(allDay),
     });
-    triggerResync(new URL(req.url).origin, !process.env.VERCEL);
+    triggerResync(new URL(req.url).origin, !process.env.VERCEL, req.headers.get("cookie"));
     return NextResponse.json({ event });
   } catch (err) {
     console.error("Calendar event create failed", err);
-    return NextResponse.json({ error: "Failed to create calendar event" }, { status: 500 });
+    return NextResponse.json(
+      { error: friendlyGoogleErrorMessage(err) ?? "Failed to create calendar event" },
+      { status: 500 },
+    );
   }
 }

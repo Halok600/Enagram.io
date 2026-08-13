@@ -2899,3 +2899,155 @@ at it being an issue there).
 
 **Current state:** Resolved and directly verified, not just
 theoretically fixed.
+
+---
+
+## 2026-08-13 — Code-review fix pass: all 15 findings resolved
+
+**Context:** User asked to test the app thoroughly before submission. Ran
+`tsc`/`eslint`/evals directly, then the `code-review` skill (xhigh effort,
+10 finder angles + verify + sweep) against everything since the redesign
+began (`459d9b6..HEAD`), producing 15 findings. User then said "fix them
+all." This entry covers that full pass.
+
+**Fixed, by severity:**
+
+1. **Critical — `trigger-resync.ts` never authenticated.** Its `fetch()`
+   to `/api/ingest/sync` after a calendar mutation forwarded no cookies,
+   so `auth()` on the target route always saw no session and 401'd —
+   silently, since `fetch()` only rejects on network failure. The entire
+   "chat sees calendar edits promptly" feature had never actually worked.
+   Fixed by threading `req.headers.get("cookie")` through from each
+   calling route into `triggerResync`, which now forwards it explicitly.
+
+2. **All-day Calendar events mishandled everywhere.** `new Date("YYYY-MM-DD")`
+   parses as UTC midnight per spec; reading it back with local getters
+   (`getFullYear`/`getMonth`/`getDate`, used throughout `CalendarBoard.tsx`'s
+   day-bucketing) silently shifts the date for negative-UTC-offset users.
+   Separately, `updateEvent` had no way to send Google's `{date: ...}`
+   form at all, so any edit or drag of an all-day event silently
+   converted it to a timed one. Fixed properly rather than patched:
+   - New `src/lib/calendar-date.ts` — `parseEventDate` (date-only strings
+     build a `Date` from local Y/M/D components instead of going through
+     the UTC-midnight parse), `shiftDateOnly` (pure UTC-anchored date-only
+     arithmetic), `isDateOnly`.
+   - `calendar.ts` — `CalendarEvent` gained `isAllDay`; `createEvent`/
+     `updateEvent` accept `allDay`, branching between `{dateTime}` and
+     `{date}`. Google's all-day `end.date` is exclusive (one day past the
+     last day); every caller of this module instead deals in an
+     inclusive last day (matches how a person says "Aug 20 to Aug 22" and
+     how the two date pickers are labeled) — the exclusive/inclusive
+     conversion happens in exactly one place, both directions, inside
+     `toCalendarEvent`/`createEvent`/`updateEvent`.
+   - `CalendarBoard.tsx`, `EventModal.tsx`, `CalendarHoverCard.tsx`,
+     `summary/route.ts` — every raw `new Date(dateOnlyString)` replaced
+     with `parseEventDate`. `EventModal` gained an "All day" checkbox
+     that swaps its inputs between `date` and `datetime-local` and
+     converts the in-progress form value on toggle. `handleDrop` now
+     branches on `event.isAllDay` and uses `shiftDateOnly` for all-day
+     chips instead of full-`Date` arithmetic, so dragging an all-day
+     event to a new day stays all-day.
+
+3. **`eventId` enrichment capped below `search_calendar`'s own limit.**
+   `gbrain-remote.ts`'s `MAX_URL_LOOKUPS = 3` was sized for optional
+   Gmail/Drive citation links, but `eventId` is functionally required for
+   `update_calendar_event`/`delete_calendar_event`, and `search_calendar`
+   defaults to a limit of 8 — hits ranked 4th-8th silently had no id to
+   act on. Fixed: calendar hits (`type === "event"`) always get enriched
+   regardless of position; Gmail/Drive hits keep the original cap.
+
+4. **Residual theme flash.** `HeroLogo`/`ThemeToggle` read `theme`
+   directly with no gate, so a user whose real preference differs from
+   the hardcoded "dark" default saw the wrong icon fully painted and then
+   watched it visibly animate away once the post-mount correction fired.
+   `ThemeProvider`'s context now exposes `mounted`; both components render
+   nothing theme-dependent until it's true, so the first icon painted is
+   already correct — no flash, no wrong-then-right animation.
+
+5. **Misleading comment in `ThemeProvider.tsx`.** Claimed the
+   `Promise.resolve().then()` microtask deferral was "the same technique
+   already validated ... for CalendarBoard.tsx's fetchEvents" — but that
+   function uses a genuine async `fetch()` chain, not a fabricated
+   microtask. Corrected to state plainly that this one has no real async
+   work; the wrapper exists purely to dodge `react-hooks/set-state-in-effect`.
+
+6. **No `isBusy` guard on `EmptyState`'s suggestion pills**, unlike the
+   text input's own send button. `Chat.tsx` now threads `isBusy` down;
+   pills disable and skip `onSend` while a request is in flight.
+
+7. **No staleness guard on `CalendarBoard.tsx`'s `fetchEvents`.** Unlike
+   `CalendarHoverCard.tsx`'s per-effect `cancelled` flag, `fetchEvents` is
+   called from several places (the range-change effect, `EventModal`'s
+   `onSaved`, `handleDrop`'s post-reschedule refresh), so a single flag
+   wouldn't cover every caller. Used a monotonic `requestIdRef` counter
+   instead — any caller's stale response is ignored if a newer request
+   has since started, regardless of which site triggered which.
+
+8. **No actionable message on calendar-write 403s.** New
+   `src/lib/google/friendly-error.ts` detects a 403 specifically and
+   explains the likely cause: a session that predates the
+   `calendar.events` scope upgrade (2026-08-10) still carries a
+   read-only-scoped refresh token — Google's refresh-token grant reissues
+   at the *originally* consented scope, it never silently upgrades — so
+   reconnecting is the fix. Wired into the three calendar API routes'
+   catch blocks and (with try/catch added, since there was none before)
+   the three calendar chat tools in `tools.ts`.
+
+9. **Stale "(read-only)" Calendar copy on the login screen** — hasn't
+   been true since the CRUD feature shipped. Reworded.
+
+10. **Dormant nested `AnimatePresence mode="wait"`** in `EventModal.tsx`'s
+    delete-confirm swap — neither branch defined an `exit` animation, so
+    it was inert, but a latent risk if the modal's own mount were later
+    wrapped in an outer `AnimatePresence` (the exact mechanism behind the
+    `/calendar` → chat blank-page bug fixed earlier this session).
+    Replaced with a plain conditional; removed the now-unused import.
+
+11. **Missing `"use client"` in `Sidebar.tsx`** despite using `useState`
+    and Framer Motion — added.
+
+12. **`EventModal.tsx` recomputed its `defaults` object on every
+    render** before handing it to `useState`. Switched to the lazy
+    `useState(() => ...)` form.
+
+13. **Redundant refetch on a pure month ↔ week toggle** — the week range
+    is always a subset of the already-fetched month grid. Added a
+    `fetchedRangeRef` tracking the last successfully-fetched range; the
+    effect skips the network call when the new range is already covered,
+    while direct calls to `fetchEvents()` (save, drag-drop) always still
+    fetch for real.
+
+14. **Auth-check boilerplate duplicated across 7 API routes.** New
+    `src/lib/auth-guard.ts` (`requireSession`) centralizes the
+    `auth()` call, the missing-`accessToken` check, and the
+    `session.error` check into one typed helper; every route
+    (`ingest/gmail`, `ingest/drive`, `ingest/sync`, `chat`, and the three
+    calendar routes) now uses it.
+
+15. **Calendar chat tools had no error handling** — any Google API
+    failure (e.g. the 403 case above) would propagate as an uncaught
+    exception mid-tool-call instead of a relayable message. Wrapped
+    `create_calendar_event`/`update_calendar_event`/`delete_calendar_event`'s
+    `execute` bodies in try/catch using `friendlyGoogleErrorMessage`.
+
+**New files:** `src/lib/auth-guard.ts`, `src/lib/calendar-date.ts`,
+`src/lib/google/friendly-error.ts`.
+
+**Verified:**
+- `tsc --noEmit`, `eslint src evals` — clean.
+- `bun run evals/run-evals.ts` — first run 5/6 (one content-check
+  failure on `tier1-gmail-thread-summary`: the model cited a Drive link
+  found inside the email body instead of the Gmail thread's own
+  `mail.google.com` citation — nothing in this diff touches Gmail
+  citation logic or the system prompt); re-run immediately after came
+  back **6/6**, confirming gemini-flash-lite non-determinism rather than
+  a regression.
+- Not re-verified live in the browser — all 15 fixes are either
+  server-side logic, pure date-math helpers, or React state-shape
+  changes with no new visual surface; `tsc`+`eslint`+evals is the
+  appropriate verification tier here, same reasoning as prior rounds
+  this session for non-visual changes.
+
+**Current state:** All 15 code-review findings fixed and verified
+statically + via evals. Not yet pushed — awaiting explicit confirmation,
+per this session's established practice.

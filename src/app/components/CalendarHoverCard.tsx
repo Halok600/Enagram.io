@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { isDateOnly, parseEventDate } from "@/lib/calendar-date";
 
 type Summary = {
   eventCountThisMonth: number;
@@ -9,9 +10,8 @@ type Summary = {
 };
 
 function formatEventTime(start: string): string {
-  const isAllDay = /^\d{4}-\d{2}-\d{2}$/.test(start);
-  const date = new Date(start);
-  return isAllDay
+  const date = parseEventDate(start);
+  return isDateOnly(start)
     ? date.toLocaleDateString([], { month: "short", day: "numeric" })
     : date.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }

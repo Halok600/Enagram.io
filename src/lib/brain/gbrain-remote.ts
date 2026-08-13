@@ -124,10 +124,15 @@ export async function searchBrain(
   // Vercel's function timeout entirely. Snippets (already in the single
   // search response, no extra cost) still cover every hit for grounding;
   // only the top few most-relevant results get a clickable citation link.
+  // Calendar hits are the exception: eventId isn't a nice-to-have citation
+  // link like url is for Gmail/Drive, it's the only handle
+  // update_calendar_event/delete_calendar_event have on the event, so every
+  // "event" hit gets enriched regardless of position (search_calendar's own
+  // default limit of 8 keeps this bounded).
   const MAX_URL_LOOKUPS = 3;
   const enriched = await Promise.all(
     filtered.map(async (hit, i) => {
-      if (i >= MAX_URL_LOOKUPS) return hit;
+      if (i >= MAX_URL_LOOKUPS && hit.type !== "event") return hit;
       const meta = await getPageMeta(hit.slug);
       return { ...hit, url: meta.url, date: meta.date, eventId: meta.eventId };
     }),

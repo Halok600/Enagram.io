@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { requireSession } from "@/lib/auth-guard";
 import { listRecentMessages } from "@/lib/google/gmail";
 import { listRecentFiles } from "@/lib/google/drive";
 import { listEvents } from "@/lib/google/calendar";
@@ -26,13 +26,8 @@ export async function POST() {
     );
   }
 
-  const session = await auth();
-  if (!session?.accessToken) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-  if (session.error) {
-    return NextResponse.json({ error: session.error }, { status: 401 });
-  }
+  const { session, error } = await requireSession();
+  if (error) return error;
 
   try {
     const [messages, files, events] = await Promise.all([

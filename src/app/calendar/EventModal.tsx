@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { X, Trash2, Pencil, ExternalLink } from "lucide-react";
+import { parseEventDate } from "@/lib/calendar-date";
 
 export type CalendarEventDTO = {
   id: string;
@@ -11,6 +12,7 @@ export type CalendarEventDTO = {
   location: string;
   start: string;
   end: string;
+  isAllDay: boolean;
   htmlLink: string;
 };
 
@@ -24,10 +26,22 @@ function toApiDateTime(localValue: string): string {
   return new Date(localValue).toISOString();
 }
 
-function toDatetimeLocalValue(iso: string): string {
-  const d = new Date(iso);
+function formatDatetimeLocal(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function formatDateOnly(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function toDatetimeLocalValue(iso: string): string {
+  return formatDatetimeLocal(new Date(iso));
+}
+
+function toDateOnlyValue(value: string): string {
+  return formatDateOnly(parseEventDate(value));
 }
 
 function defaultTimes(initialDate?: Date): { start: string; end: string } {
@@ -35,10 +49,14 @@ function defaultTimes(initialDate?: Date): { start: string; end: string } {
   base.setHours(9, 0, 0, 0);
   const end = new Date(base);
   end.setHours(base.getHours() + 1);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const fmt = (d: Date) =>
-    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  return { start: fmt(base), end: fmt(end) };
+  return { start: formatDatetimeLocal(base), end: formatDatetimeLocal(end) };
+}
+
+function formatAllDayRange(start: string, end: string): string {
+  const startLabel = parseEventDate(start).toLocaleDateString([], { dateStyle: "medium" });
+  if (start === end) return `${startLabel} · All day`;
+  const endLabel = parseEventDate(end).toLocaleDateString([], { dateStyle: "medium" });
+  return `${startLabel} – ${endLabel} · All day`;
 }
 
 const inputClasses =
@@ -62,17 +80,31 @@ export function EventModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const defaults = event
-    ? {
-        summary: event.summary,
-        location: event.location,
-        description: event.description,
-        start: toDatetimeLocalValue(event.start),
-        end: toDatetimeLocalValue(event.end),
-      }
-    : { summary: "", location: "", description: "", ...defaultTimes(initialDate) };
+  const [form, setForm] = useState(() =>
+    event
+      ? {
+          summary: event.summary,
+          location: event.location,
+          description: event.description,
+          allDay: event.isAllDay,
+          start: event.isAllDay ? event.start : toDatetimeLocalValue(event.start),
+          end: event.isAllDay ? event.end : toDatetimeLocalValue(event.end),
+        }
+      : { summary: "", location: "", description: "", allDay: false, ...defaultTimes(initialDate) },
+  );
 
-  const [form, setForm] = useState(defaults);
+  function handleToggleAllDay(nextAllDay: boolean) {
+    setForm((f) => {
+      if (nextAllDay) {
+        return { ...f, allDay: true, start: toDateOnlyValue(f.start), end: toDateOnlyValue(f.end) };
+      }
+      const start = parseEventDate(f.start);
+      start.setHours(9, 0, 0, 0);
+      const end = parseEventDate(f.end);
+      end.setHours(10, 0, 0, 0);
+      return { ...f, allDay: false, start: formatDatetimeLocal(start), end: formatDatetimeLocal(end) };
+    });
+  }
 
   async function handleSave() {
     if (!form.summary.trim()) {
@@ -84,10 +116,11 @@ export function EventModal({
     try {
       const payload = {
         summary: form.summary,
-        startDateTime: toApiDateTime(form.start),
-        endDateTime: toApiDateTime(form.end),
+        startDateTime: form.allDay ? form.start : toApiDateTime(form.start),
+        endDateTime: form.allDay ? form.end : toApiDateTime(form.end),
         description: form.description,
         location: form.location,
+        allDay: form.allDay,
       };
       const res = await fetch(event ? `/api/calendar/events/${event.id}` : "/api/calendar/events", {
         method: event ? "PATCH" : "POST",
@@ -162,11 +195,19 @@ export function EventModal({
               className={inputClasses}
               autoFocus
             />
+            <label className="flex w-fit items-center gap-2 text-sm text-[var(--text-secondary)]">
+              <input
+                type="checkbox"
+                checked={form.allDay}
+                onChange={(e) => handleToggleAllDay(e.target.checked)}
+              />
+              All day
+            </label>
             <div className="flex gap-3">
               <label className="flex-1 text-xs text-[var(--text-tertiary)]">
                 Start
                 <input
-                  type="datetime-local"
+                  type={form.allDay ? "date" : "datetime-local"}
                   value={form.start}
                   onChange={(e) => setForm((f) => ({ ...f, start: e.target.value }))}
                   className={`${inputClasses} mt-1`}
@@ -175,7 +216,7 @@ export function EventModal({
               <label className="flex-1 text-xs text-[var(--text-tertiary)]">
                 End
                 <input
-                  type="datetime-local"
+                  type={form.allDay ? "date" : "datetime-local"}
                   value={form.end}
                   onChange={(e) => setForm((f) => ({ ...f, end: e.target.value }))}
                   className={`${inputClasses} mt-1`}
@@ -221,9 +262,9 @@ export function EventModal({
             <div className="flex flex-col gap-3">
               <h3 className="text-base font-semibold text-[var(--text-primary)]">{event.summary}</h3>
               <p className="text-sm text-[var(--text-secondary)]">
-                {new Date(event.start).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
-                {" – "}
-                {new Date(event.end).toLocaleString([], { timeStyle: "short" })}
+                {event.isAllDay
+                  ? formatAllDayRange(event.start, event.end)
+                  : `${new Date(event.start).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })} – ${new Date(event.end).toLocaleString([], { timeStyle: "short" })}`}
               </p>
               {event.location && <p className="text-sm text-[var(--text-secondary)]">{event.location}</p>}
               {event.description && <p className="text-sm text-[var(--text-secondary)]">{event.description}</p>}
@@ -240,43 +281,49 @@ export function EventModal({
               {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
 
               <div className="mt-2 flex justify-between gap-2 border-t border-[var(--border)] pt-4">
-                <AnimatePresence mode="wait">
-                  {confirmingDelete ? (
-                    <motion.div
-                      key="confirm"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="flex items-center gap-2"
-                    >
-                      <span className="text-sm text-[var(--text-secondary)]">Delete this event?</span>
-                      <button
-                        type="button"
-                        onClick={handleDelete}
-                        disabled={saving}
-                        className="rounded-[var(--radius-sm)] bg-[var(--danger)] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
-                      >
-                        Yes, delete
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setConfirmingDelete(false)}
-                        className="rounded-[var(--radius-sm)] border border-[var(--border)] px-3 py-1.5 text-sm font-medium text-[var(--text-primary)]"
-                      >
-                        Cancel
-                      </button>
-                    </motion.div>
-                  ) : (
-                    <motion.button
-                      key="delete"
+                {/* Plain conditional, not AnimatePresence: neither branch
+                 * ever defined an `exit` animation, so `mode="wait"` had
+                 * nothing to actually wait on — it was dead weight that
+                 * would only become a real risk if this modal's own mount
+                 * were later wrapped in an outer AnimatePresence (the same
+                 * "child animation never signals exit-complete" mechanism
+                 * that caused the blank-page navigation bug, see
+                 * PageTransition.tsx / JOURNAL.md 2026-08-13). */}
+                {confirmingDelete ? (
+                  <motion.div
+                    key="confirm"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex items-center gap-2"
+                  >
+                    <span className="text-sm text-[var(--text-secondary)]">Delete this event?</span>
+                    <button
                       type="button"
-                      onClick={() => setConfirmingDelete(true)}
-                      className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] px-3 py-1.5 text-sm font-medium text-[var(--danger)] hover:bg-[var(--danger-soft-bg)]"
+                      onClick={handleDelete}
+                      disabled={saving}
+                      className="rounded-[var(--radius-sm)] bg-[var(--danger)] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
                     >
-                      <Trash2 size={14} />
-                      Delete
-                    </motion.button>
-                  )}
-                </AnimatePresence>
+                      Yes, delete
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmingDelete(false)}
+                      className="rounded-[var(--radius-sm)] border border-[var(--border)] px-3 py-1.5 text-sm font-medium text-[var(--text-primary)]"
+                    >
+                      Cancel
+                    </button>
+                  </motion.div>
+                ) : (
+                  <motion.button
+                    key="delete"
+                    type="button"
+                    onClick={() => setConfirmingDelete(true)}
+                    className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] px-3 py-1.5 text-sm font-medium text-[var(--danger)] hover:bg-[var(--danger-soft-bg)]"
+                  >
+                    <Trash2 size={14} />
+                    Delete
+                  </motion.button>
+                )}
 
                 {!confirmingDelete && (
                   <motion.button

@@ -1,12 +1,14 @@
 import { google, calendar_v3 } from "googleapis";
+import { shiftDateOnly } from "@/lib/calendar-date";
 
 export type CalendarEvent = {
   id: string;
   summary: string;
   description: string;
   location: string;
-  start: string; // ISO 8601 (or YYYY-MM-DD for all-day events)
-  end: string;
+  start: string; // ISO 8601 (or YYYY-MM-DD, inclusive, for all-day events)
+  end: string; // ISO 8601 (or YYYY-MM-DD, inclusive, for all-day events)
+  isAllDay: boolean;
   attendees: string[];
   organizer: string;
   htmlLink: string;
@@ -18,14 +20,25 @@ function getClient(accessToken: string) {
   return google.calendar({ version: "v3", auth });
 }
 
+/**
+ * Google's all-day `end.date` is EXCLUSIVE (one day past the last day of
+ * the event) — every caller of this module (createEvent/updateEvent and
+ * everything reading their return value) instead deals in an INCLUSIVE
+ * last day, matching how a human describes "Aug 20 to Aug 22" and how
+ * EventModal's two date pickers are labeled. This is the only place that
+ * conversion happens, in both directions.
+ */
 function toCalendarEvent(event: calendar_v3.Schema$Event): CalendarEvent {
+  const isAllDay = Boolean(event.start?.date && !event.start?.dateTime);
+  const rawEnd = event.end?.dateTime ?? event.end?.date ?? "";
   return {
     id: event.id!,
     summary: event.summary || "(no title)",
     description: event.description ?? "",
     location: event.location ?? "",
     start: event.start?.dateTime ?? event.start?.date ?? "",
-    end: event.end?.dateTime ?? event.end?.date ?? "",
+    end: isAllDay && rawEnd ? shiftDateOnly(rawEnd, -1) : rawEnd,
+    isAllDay,
     attendees: (event.attendees ?? [])
       .map((a) => a.email)
       .filter((email): email is string => Boolean(email)),
@@ -87,12 +100,14 @@ export async function listEvents(
  */
 export async function createEvent(
   accessToken: string,
-  { summary, startDateTime, endDateTime, description, location }: {
+  { summary, startDateTime, endDateTime, description, location, allDay }: {
     summary: string;
     startDateTime: string;
     endDateTime: string;
     description?: string;
     location?: string;
+    /** When true, startDateTime/endDateTime are "YYYY-MM-DD" (inclusive last day), not ISO datetimes. */
+    allDay?: boolean;
   },
 ): Promise<CalendarEvent> {
   const calendar = getClient(accessToken);
@@ -102,8 +117,8 @@ export async function createEvent(
       summary,
       description,
       location,
-      start: { dateTime: startDateTime },
-      end: { dateTime: endDateTime },
+      start: allDay ? { date: startDateTime } : { dateTime: startDateTime },
+      end: allDay ? { date: shiftDateOnly(endDateTime, 1) } : { dateTime: endDateTime },
     },
   });
   return toCalendarEvent(res.data);
@@ -111,13 +126,15 @@ export async function createEvent(
 
 export async function updateEvent(
   accessToken: string,
-  { eventId, summary, startDateTime, endDateTime, description, location }: {
+  { eventId, summary, startDateTime, endDateTime, description, location, allDay }: {
     eventId: string;
     summary?: string;
     startDateTime?: string;
     endDateTime?: string;
     description?: string;
     location?: string;
+    /** When true, startDateTime/endDateTime are "YYYY-MM-DD" (inclusive last day), not ISO datetimes. */
+    allDay?: boolean;
   },
 ): Promise<CalendarEvent> {
   const calendar = getClient(accessToken);
@@ -128,8 +145,12 @@ export async function updateEvent(
       ...(summary !== undefined ? { summary } : {}),
       ...(description !== undefined ? { description } : {}),
       ...(location !== undefined ? { location } : {}),
-      ...(startDateTime !== undefined ? { start: { dateTime: startDateTime } } : {}),
-      ...(endDateTime !== undefined ? { end: { dateTime: endDateTime } } : {}),
+      ...(startDateTime !== undefined
+        ? { start: allDay ? { date: startDateTime } : { dateTime: startDateTime } }
+        : {}),
+      ...(endDateTime !== undefined
+        ? { end: allDay ? { date: shiftDateOnly(endDateTime, 1) } : { dateTime: endDateTime } }
+        : {}),
     },
   });
   return toCalendarEvent(res.data);

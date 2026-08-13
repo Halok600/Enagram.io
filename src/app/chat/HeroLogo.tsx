@@ -37,12 +37,17 @@ function BatSilhouette({ className, style }: { className?: string; style?: React
  * Brain icon whenever the theme changes — same AnimatePresence-by-key
  * pattern as PageTransition.tsx's route crossfade. */
 export function HeroLogo() {
-  const { theme } = useTheme();
+  const { theme, mounted } = useTheme();
 
   return (
     <div className="relative flex h-20 items-center justify-center">
+      {/* Nothing renders until `mounted` is true, so the FIRST icon this
+       * paints is already the correct one — otherwise a user whose real
+       * preference differs from the hardcoded "dark" default would see the
+       * wrong icon fully rendered and then watch it visibly crossfade away
+       * once the real theme corrects. */}
       <AnimatePresence mode="wait">
-        {theme === "dark" ? (
+        {!mounted ? null : theme === "dark" ? (
           <motion.div
             key="bat"
             initial={{ opacity: 0, scale: 0.85 }}

@@ -10,6 +10,7 @@ import {
 } from "@/lib/brain/gbrain-remote";
 import { createDraftReply } from "@/lib/google/gmail";
 import { createEvent, updateEvent, deleteEvent } from "@/lib/google/calendar";
+import { friendlyGoogleErrorMessage } from "@/lib/google/friendly-error";
 
 /**
  * The url search_gmail already returns for citations
@@ -129,8 +130,15 @@ function createCalendarEventTool(accessToken: string) {
       location: z.string().optional(),
     }),
     execute: async ({ summary, startDateTime, endDateTime, description, location }) => {
-      const event = await createEvent(accessToken, { summary, startDateTime, endDateTime, description, location });
-      return { status: "created" as const, summary: event.summary, start: event.start, webLink: event.htmlLink };
+      try {
+        const event = await createEvent(accessToken, { summary, startDateTime, endDateTime, description, location });
+        return { status: "created" as const, summary: event.summary, start: event.start, webLink: event.htmlLink };
+      } catch (err) {
+        return {
+          status: "error" as const,
+          message: friendlyGoogleErrorMessage(err) ?? "Failed to create the calendar event.",
+        };
+      }
     },
   });
 }
@@ -152,15 +160,22 @@ function updateCalendarEventTool(accessToken: string) {
       location: z.string().optional(),
     }),
     execute: async ({ eventId, summary, startDateTime, endDateTime, description, location }) => {
-      const event = await updateEvent(accessToken, {
-        eventId,
-        summary,
-        startDateTime,
-        endDateTime,
-        description,
-        location,
-      });
-      return { status: "updated" as const, summary: event.summary, start: event.start, webLink: event.htmlLink };
+      try {
+        const event = await updateEvent(accessToken, {
+          eventId,
+          summary,
+          startDateTime,
+          endDateTime,
+          description,
+          location,
+        });
+        return { status: "updated" as const, summary: event.summary, start: event.start, webLink: event.htmlLink };
+      } catch (err) {
+        return {
+          status: "error" as const,
+          message: friendlyGoogleErrorMessage(err) ?? "Failed to update the calendar event.",
+        };
+      }
     },
   });
 }
@@ -176,8 +191,15 @@ function deleteCalendarEventTool(accessToken: string) {
       eventId: z.string().describe("The eventId field from the search_calendar result for the event being deleted"),
     }),
     execute: async ({ eventId }) => {
-      await deleteEvent(accessToken, eventId);
-      return { status: "deleted" as const, eventId };
+      try {
+        await deleteEvent(accessToken, eventId);
+        return { status: "deleted" as const, eventId };
+      } catch (err) {
+        return {
+          status: "error" as const,
+          message: friendlyGoogleErrorMessage(err) ?? "Failed to delete the calendar event.",
+        };
+      }
     },
   });
 }

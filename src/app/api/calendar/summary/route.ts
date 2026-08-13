@@ -1,18 +1,15 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { requireSession } from "@/lib/auth-guard";
 import { listEvents } from "@/lib/google/calendar";
+import { friendlyGoogleErrorMessage } from "@/lib/google/friendly-error";
+import { parseEventDate } from "@/lib/calendar-date";
 
 /** Powers the sidebar's Calendar hover card — live data (not gbrain's
  * indexed snapshot), fetched on demand on hover, so it's always accurate
  * even if a sync hasn't run recently. */
 export async function GET() {
-  const session = await auth();
-  if (!session?.accessToken) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-  if (session.error) {
-    return NextResponse.json({ error: session.error }, { status: 401 });
-  }
+  const { session, error } = await requireSession();
+  if (error) return error;
 
   try {
     const now = new Date();
@@ -26,13 +23,16 @@ export async function GET() {
     });
 
     const upcoming = events
-      .filter((e) => new Date(e.start).getTime() >= now.getTime())
+      .filter((e) => parseEventDate(e.start).getTime() >= now.getTime())
       .slice(0, 3)
       .map((e) => ({ summary: e.summary, start: e.start, htmlLink: e.htmlLink }));
 
     return NextResponse.json({ eventCountThisMonth: events.length, upcoming });
   } catch (err) {
     console.error("Calendar summary failed", err);
-    return NextResponse.json({ error: "Failed to load calendar summary" }, { status: 500 });
+    return NextResponse.json(
+      { error: friendlyGoogleErrorMessage(err) ?? "Failed to load calendar summary" },
+      { status: 500 },
+    );
   }
 }

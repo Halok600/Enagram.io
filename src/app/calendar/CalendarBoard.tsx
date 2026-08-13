@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, type PanInfo } from "framer-motion";
 import { ChevronLeft, ChevronRight, Plus, ArrowLeft } from "lucide-react";
 import { EventModal, type CalendarEventDTO } from "./EventModal";
+import { parseEventDate, shiftDateOnly } from "@/lib/calendar-date";
 
 type ViewMode = "month" | "week";
 type ModalState = { mode: "create"; date: Date } | { mode: "view" | "edit"; event: CalendarEventDTO } | null;
@@ -46,6 +47,7 @@ export function CalendarBoard() {
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<ModalState>(null);
   const cellRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const requestIdRef = useRef(0);
 
   const gridStart = useMemo(
     () => (viewMode === "month" ? startOfMonthGrid(cursor) : startOfWeek(cursor)),
@@ -64,35 +66,63 @@ export function CalendarBoard() {
   // itself — every setState happens inside a later .then() callback,
   // never synchronously in the effect's call stack — sidesteps it cleanly,
   // matching CalendarHoverCard.tsx's already-correct pattern.
+  // Guarded by a monotonic request id rather than a single per-effect
+  // `cancelled` flag (CalendarHoverCard.tsx's pattern) because fetchEvents
+  // is called from multiple places — the range-change effect below, but
+  // also EventModal's onSaved and handleDrop's post-reschedule refresh —
+  // so a stale in-flight response needs to be ignorable no matter which
+  // caller's request it belongs to, not just superseded effect runs.
+  // Tracks the range covered by the most recent successful fetch, so
+  // toggling month -> week (or back) at the same cursor — always a subset
+  // of the month grid already in `events` — can reuse it instead of firing
+  // a redundant network round-trip. Only read/written here; callers that
+  // need to force a real refetch (EventModal's onSaved, handleDrop) call
+  // fetchEvents() directly, bypassing this range check entirely.
+  const fetchedRangeRef = useRef<{ start: number; end: number } | null>(null);
+
   const fetchEvents = useCallback(() => {
+    const requestId = ++requestIdRef.current;
     fetch(
       `/api/calendar/events?start=${encodeURIComponent(gridStart.toISOString())}&end=${encodeURIComponent(gridEnd.toISOString())}`,
     )
       .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
       .then(({ ok, data }) => {
-        if (ok) setEvents(data.events ?? []);
+        if (requestId !== requestIdRef.current) return;
+        if (ok) {
+          setEvents(data.events ?? []);
+          fetchedRangeRef.current = { start: gridStart.getTime(), end: gridEnd.getTime() };
+        }
         setLoading(false);
       })
       .catch((err) => {
+        if (requestId !== requestIdRef.current) return;
         console.error("Failed to load calendar events", err);
         setLoading(false);
       });
   }, [gridStart, gridEnd]);
 
   useEffect(() => {
+    // `fetchedRangeRef` is only ever populated inside fetchEvents' own
+    // success callback, so by the time it's covered here `loading` was
+    // already set to false when that earlier fetch completed — nothing
+    // left to update for this narrower, already-covered range.
+    const covered = fetchedRangeRef.current;
+    if (covered && gridStart.getTime() >= covered.start && gridEnd.getTime() <= covered.end) {
+      return;
+    }
     fetchEvents();
-  }, [fetchEvents]);
+  }, [fetchEvents, gridStart, gridEnd]);
 
   const eventsByDay = useMemo(() => {
     const map = new Map<string, CalendarEventDTO[]>();
     for (const event of events) {
-      const key = dateKey(new Date(event.start));
+      const key = dateKey(parseEventDate(event.start));
       const list = map.get(key) ?? [];
       list.push(event);
       map.set(key, list);
     }
     for (const list of map.values()) {
-      list.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+      list.sort((a, b) => parseEventDate(a.start).getTime() - parseEventDate(b.start).getTime());
     }
     return map;
   }, [events]);
@@ -102,21 +132,26 @@ export function CalendarBoard() {
   }
 
   async function handleDrop(event: CalendarEventDTO, targetDate: Date) {
-    const originalStart = new Date(event.start);
+    const originalStart = parseEventDate(event.start);
     const dayDelta = Math.round((startOfDayMs(targetDate) - startOfDayMs(originalStart)) / (24 * 60 * 60 * 1000));
     if (dayDelta === 0) return;
 
-    const newStart = addDays(originalStart, dayDelta);
-    const newEnd = addDays(new Date(event.end), dayDelta);
+    const body = event.isAllDay
+      ? {
+          allDay: true,
+          startDateTime: shiftDateOnly(event.start, dayDelta),
+          endDateTime: shiftDateOnly(event.end, dayDelta),
+        }
+      : {
+          startDateTime: addDays(originalStart, dayDelta).toISOString(),
+          endDateTime: addDays(parseEventDate(event.end), dayDelta).toISOString(),
+        };
 
     try {
       const res = await fetch(`/api/calendar/events/${event.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          startDateTime: newStart.toISOString(),
-          endDateTime: newEnd.toISOString(),
-        }),
+        body: JSON.stringify(body),
       });
       if (res.ok) void fetchEvents();
     } catch (err) {
