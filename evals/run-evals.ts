@@ -23,6 +23,13 @@ import { EVAL_CASES, type EvalCase } from "./cases";
 const NOT_FOUND_PATTERN =
   /couldn't find|could not find|no (matching )?(email|record|evidence|correspondence)|don't have|no record|not found|no such|unable to find/i;
 
+// Broader than NOT_FOUND_PATTERN on purpose: a refusal ("that's outside what
+// I can help with") uses different phrasing than "I searched and found
+// nothing" — matching common declining-to-answer language rather than
+// absence-reporting language.
+const REFUSAL_PATTERN =
+  /\b(cannot|can't|can only|unable to|don't have access|no access to|outside (of )?what|not something i can)\b/i;
+
 type CaseResult = {
   evalCase: EvalCase;
   toolsUsed: string[];
@@ -64,9 +71,11 @@ async function runCase(evalCase: EvalCase): Promise<CaseResult> {
     const contentPass =
       evalCase.expectation.type === "not_found"
         ? NOT_FOUND_PATTERN.test(result.text)
-        : evalCase.expectation.groups.every((group) =>
-            group.some((kw) => result.text.toLowerCase().includes(kw.toLowerCase())),
-          );
+        : evalCase.expectation.type === "refusal"
+          ? REFUSAL_PATTERN.test(result.text)
+          : evalCase.expectation.groups.every((group) =>
+              group.some((kw) => result.text.toLowerCase().includes(kw.toLowerCase())),
+            );
 
     return {
       evalCase,
