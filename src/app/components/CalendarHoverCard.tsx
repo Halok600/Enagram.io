@@ -19,9 +19,11 @@ function formatEventTime(start: string): string {
 /** Rendered by Sidebar.tsx on hover over the Calendar row — fetches its
  * own data on mount since the parent only mounts it while hovering, so
  * there's no need for a separate "visible" prop to gate the fetch. */
+const GENERIC_FAILURE = "Couldn't load calendar summary";
+
 export function CalendarHoverCard() {
   const [summary, setSummary] = useState<Summary | null>(null);
-  const [failed, setFailed] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -29,11 +31,11 @@ export function CalendarHoverCard() {
       .then((res) => res.json())
       .then((data) => {
         if (cancelled) return;
-        if (data.error) setFailed(true);
+        if (data.error) setError(typeof data.error === "string" ? data.error : GENERIC_FAILURE);
         else setSummary(data);
       })
       .catch(() => {
-        if (!cancelled) setFailed(true);
+        if (!cancelled) setError(GENERIC_FAILURE);
       });
     return () => {
       cancelled = true;
@@ -53,8 +55,8 @@ export function CalendarHoverCard() {
         This month&apos;s activity
       </p>
 
-      {!summary && !failed && <p className="mt-2 text-sm text-[var(--text-tertiary)]">Loading…</p>}
-      {failed && <p className="mt-2 text-sm text-[var(--danger)]">Couldn&apos;t load calendar summary</p>}
+      {!summary && !error && <p className="mt-2 text-sm text-[var(--text-tertiary)]">Loading…</p>}
+      {error && <p className="mt-2 text-sm text-[var(--danger)]">{error}</p>}
 
       {summary && (
         <>
