@@ -1,5 +1,5 @@
 /**
- * Real eval loop for the Personal Brain assignment (harness-engineering
+ * Real eval loop for the Enagram.io assignment (harness-engineering
  * bonus, SPEC.md §5). Runs the actual production tool set and system
  * prompt (shared via src/lib/query/config.ts — not a hand-copied duplicate)
  * against real live data (the deployed gbrain brain over the remote MCP

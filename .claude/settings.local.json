@@ -20,7 +20,13 @@
       "Bash(bun --version)",
       "Bash(netstat -ano)",
       "Bash(git diff *)",
-      "Bash(grep -v \"\\\\.map$\")"
+      "Bash(grep -v \"\\\\.map$\")",
+      "Bash(pandoc -t markdown \"C:\\\\Users\\\\lenovo\\\\Downloads\\\\skilllayer_sde_I_takehome.docx\")",
+      "Read(//tmp/**)",
+      "Bash(node -e ' *)",
+      "Bash(cp /tmp/dx/extracted.txt \"C:\\\\Users\\\\lenovo\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\D--Projects-PROJECT-MAIN-AI\\\\a883225e-ebb4-42f5-a5c8-c03847f30c6d\\\\scratchpad\\\\extracted.txt\" 2>&1 || echo FAILED)",
+      "Bash(git remote *)",
+      "Bash(git ls-remote *)"
     ]
   }
 }

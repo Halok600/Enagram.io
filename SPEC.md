@@ -1,4 +1,4 @@
-# SPEC.md — Personal Brain
+# SPEC.md — Enagram.io
 
 Status: DRAFT v1 — written before implementation, per SDD requirement.
 Owner: Priyanshu Kumar Tiwari

@@ -59,7 +59,7 @@ export async function commitBrainRepo(message: string): Promise<{ committed: boo
     "-c",
     "user.email=local@personal-brain.dev",
     "-c",
-    "user.name=Personal Brain Ingestion",
+    "user.name=Enagram.io Ingestion",
     "commit",
     "-m",
     message,

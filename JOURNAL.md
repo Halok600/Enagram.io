@@ -1,4 +1,4 @@
-# JOURNAL.md — Personal Brain build log
+# JOURNAL.md — Enagram.io build log
 
 Format per entry: timestamp, context, decision/trade-off, prompt iteration
 notes (if any), current system state.
@@ -3117,3 +3117,68 @@ against.
 **Current state:** Both issues resolved — OAuth scope fix confirmed
 live by the user; off-topic refusal hardened and covered by a new eval
 case, consistent across two runs. Not yet pushed.
+
+---
+
+## 2026-08-16 — Rebrand to Enagram.io; user renamed GitHub repo + Vercel project
+
+**Context:** After the display-text rebrand two entries up, the user went
+further and renamed the actual GitHub repo (`PROJECT_MAIN_AI` →
+`Enagram.io`, still under `Halok600`) and the Vercel project itself,
+then asked for every remaining reference updated to match.
+
+**Updated:**
+- `package.json` — `name`: `"personal-brain"` → `"enagram-io"`.
+- `README.md` — title header.
+- `JOURNAL.md` / `SPEC.md` — their own `#` title headers only (both are
+  live, currently-pinned document titles, not historical entries).
+- `src/lib/brain/gbrain-cli.ts` — the git author name used for local
+  ingestion-repo auto-commits (`Personal Brain Ingestion` → `Enagram.io
+  Ingestion`) — cosmetic, nobody outside this machine ever sees it, but
+  free to keep consistent.
+- `evals/run-evals.ts` — a doc comment referencing the assignment by
+  the app's name.
+- Local git remote — `git remote set-url origin` to
+  `https://github.com/Halok600/Enagram.io.git` (the old URL still
+  worked via GitHub's rename redirect, but pointing it at the real
+  current URL directly is more correct and doesn't rely on the redirect
+  staying in place). Verified reachable via `git ls-remote --heads
+  origin`.
+
+**Deliberately NOT touched:**
+- Every "Personal Brain"/`PROJECT_MAIN_AI` mention INSIDE a past dated
+  JOURNAL.md entry (git commit message quotes, the actual OAuth consent
+  screen text observed on 2026-08-03, the actual deploy URL noted on
+  2026-08-05) — those are accurate records of what was literally true
+  at each point in time; rewriting them would misrepresent the project's
+  own history, not just its current name.
+- `brain/sources/drive-...md` — this is ingested THIRD-PARTY data (the
+  actual take-home assignment brief, pulled verbatim from the user's own
+  Drive), not something this project authored. Its use of "Personal
+  Brain" is the assignment's own generic term for the app category, not
+  this repo's brand name — not ours to edit.
+- The local folder path (`D:\Projects\PROJECT_MAIN_AI`) and
+  `.claude/settings.local.json`'s one path-matching permission entry
+  that references it — an OS-level directory rename is a materially
+  different, more disruptive action (breaks the current session's
+  working directory, any open editor/terminal state) than updating text
+  inside the repo, and wasn't asked for.
+
+**Flagged to the user, not something fixable from the codebase:**
+Vercel's own project-settings copy says the Project Name is used "in
+the URL of your Deployments" — meaning the production domain may
+actually change from `project-main-ai.vercel.app` to something
+`enagram-io`-based once Vercel picks up the rename, not just the
+dashboard label. If that happens, the Google Cloud Console OAuth
+client's "Authorized redirect URIs" list needs the new domain's
+`/api/auth/callback/google` added (mirroring the existing entry
+documented in the 2026-08-05 deploy entry above), or sign-in on the new
+URL will break. This needs the user to check Vercel's Domains tab
+directly — not something observable or fixable from this repo.
+
+**Verified:** `eslint src evals` clean. No browser-observable surface
+changed (package.json name, doc headers, code comments, git remote) —
+nothing to check live.
+
+**Current state:** All in-repo references updated to match the external
+rename. Not yet pushed.
