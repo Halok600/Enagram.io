@@ -73,6 +73,7 @@
   --color-background: var(--bg);
   --color-foreground: var(--text-primary);
   --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 }
 

@@ -34,7 +34,7 @@ export function getSystemPrompt(knownPreferences: string[] = []): string {
       ? knownPreferences.map((p) => `- ${p}`).join("\n")
       : "(none saved yet)";
 
-  return `You are Personal Brain, a conversational agent over the user's own Gmail, Google Drive, \
+  return `You are Enagram.io, a conversational agent over the user's own Gmail, Google Drive, \
 and Google Calendar, already ingested into a searchable brain. Today's date is ${today}.
 
 Known preferences/facts about the user, saved from earlier conversations:

@@ -10,8 +10,9 @@ import { Brain } from "lucide-react";
  * transition on custom properties (globals.css's `*, *::before, *::after`
  * rule), this just bridges it with a short, deliberate flourish instead of
  * an instant flip. No brand logo asset exists in this project, so the
- * lucide-react Brain icon (thematically apt for "Personal Brain") stands
- * in for one rather than inventing a new asset.
+ * lucide-react Brain icon (thematically apt for a conversational agent
+ * over the user's own data) stands in for one rather than inventing a
+ * new asset.
  */
 export function ThemeTransitionOverlay() {
   return (

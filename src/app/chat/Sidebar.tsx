@@ -130,8 +130,8 @@ export function Sidebar({
       <div className="flex flex-col gap-8">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">
-              Personal Brain
+            <h1 className="font-display text-xl font-bold tracking-tight text-[var(--text-primary)]">
+              Enagram.io
             </h1>
             <p className="mt-1 truncate text-xs text-[var(--text-tertiary)]">{email}</p>
           </div>

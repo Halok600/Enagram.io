@@ -30,8 +30,8 @@ function LoginScreen() {
         className="flex w-full max-w-lg flex-col items-center gap-8 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--bg-panel)] p-14 text-center"
         style={{ boxShadow: "var(--shadow-md)" }}
       >
-        <h1 className="text-4xl font-bold tracking-tight text-[var(--text-primary)]">
-          Personal Brain
+        <h1 className="font-display text-4xl font-bold tracking-tight text-[var(--text-primary)]">
+          Enagram.io
         </h1>
         <p className="text-lg text-[var(--text-secondary)]">
           Connect your Google account to let the brain read your Gmail and Drive,
