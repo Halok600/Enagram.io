@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireSession } from "@/lib/auth-guard";
 import { listEvents, createEvent } from "@/lib/google/calendar";
 import { triggerResync } from "@/lib/brain/trigger-resync";
+import { isIngestionAvailable } from "@/lib/brain/ingest-tunnel";
 import { friendlyGoogleErrorMessage } from "@/lib/google/friendly-error";
 
 /** Lists events for whatever month/week the /calendar page currently has displayed. */
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest) {
       location,
       allDay: Boolean(allDay),
     });
-    triggerResync(new URL(req.url).origin, !process.env.VERCEL, req.headers.get("cookie"));
+    triggerResync(new URL(req.url).origin, isIngestionAvailable(), req.headers.get("cookie"));
     return NextResponse.json({ event });
   } catch (err) {
     console.error("Calendar event create failed", err);
