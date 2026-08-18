@@ -67,10 +67,23 @@ export async function commitBrainRepo(message: string): Promise<{ committed: boo
   return { committed: true, log: commit.stdout };
 }
 
-export async function syncBrain(): Promise<string> {
+export type SyncBrainResult = { skipped: boolean; log: string };
+
+/**
+ * `skipped` is a real, structured field rather than something the caller
+ * has to infer by pattern-matching the log text — the lock-collision case
+ * below is the one place that already knows definitively whether the
+ * embed/index step actually ran, so it should just say so. Previously this
+ * returned a single opaque string, which meant a skipped sync and a real
+ * one both rendered as "success" in the UI (SyncButton.tsx never showed
+ * this string at all) — a genuinely misleading state discovered live: git
+ * commits kept succeeding while indexing silently no-op'd behind a stale
+ * lock, so "Sync now" looked like it worked every time it didn't.
+ */
+export async function syncBrain(): Promise<SyncBrainResult> {
   try {
     const { stdout, stderr } = await run(gbrainBin(), ["sync", "--source", GBRAIN_SOURCE_ID]);
-    return stdout + stderr;
+    return { skipped: false, log: stdout + stderr };
   } catch (err) {
     // gbrain's own concurrency lock (not a bug in gbrain) rejects a sync
     // outright if another one is still running for the same source — a real
@@ -80,7 +93,7 @@ export async function syncBrain(): Promise<string> {
     // rather than surfacing a scary 500 to the UI.
     const stderr = (err as { stderr?: string }).stderr ?? "";
     if (stderr.includes("Another sync is in progress")) {
-      return `Sync already in progress elsewhere — skipped this run.\n${stderr}`;
+      return { skipped: true, log: stderr };
     }
     throw err;
   }

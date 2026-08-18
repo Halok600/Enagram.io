@@ -10,6 +10,7 @@ type SyncResult = {
   pagesWritten: number;
   committed: boolean;
   linksCreated: number;
+  syncSkipped: boolean;
   syncLog: string;
 };
 
@@ -51,11 +52,32 @@ export function SyncButton() {
       </motion.button>
 
       {state === "done" && result && (
-        <p className="text-xs leading-snug text-[var(--text-tertiary)]">
-          {result.gmailCount} email(s) + {result.driveCount} file(s) + {result.calendarCount} event(s) →{" "}
-          {result.pagesWritten} page(s)
-          {result.committed ? `, synced (${result.linksCreated} link(s))` : " (no changes)"}.
-        </p>
+        <>
+          <p className="text-xs leading-snug text-[var(--text-tertiary)]">
+            {result.gmailCount} email(s) + {result.driveCount} file(s) + {result.calendarCount} event(s) →{" "}
+            {result.pagesWritten} page(s)
+            {result.committed ? `, synced (${result.linksCreated} link(s))` : " (no changes)"}.
+          </p>
+          {result.syncSkipped && (
+            <p className="text-xs leading-snug text-[var(--danger)]">
+              ⚠ Indexing was skipped — another sync was already running (or its lock got stuck). Your
+              data above was written and committed, but isn&apos;t searchable yet. Wait a moment and try
+              again.
+            </p>
+          )}
+          {/* Previously silently discarded — gbrain's own sync/embed output was fetched but never
+           * shown anywhere, so a stuck lock (which makes every click LOOK successful, since the git
+           * commit step really does succeed) had no way to be diagnosed from the browser. Collapsed
+           * by default since it's raw CLI output, but auto-opened when something's actually wrong. */}
+          <details open={result.syncSkipped} className="text-xs text-[var(--text-tertiary)]">
+            <summary className="cursor-pointer select-none hover:text-[var(--text-secondary)]">
+              View sync log
+            </summary>
+            <pre className="mt-1.5 max-h-40 overflow-auto whitespace-pre-wrap rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--bg-panel-raised)] p-2 font-mono text-[11px] leading-snug text-[var(--text-secondary)]">
+              {result.syncLog || "(empty)"}
+            </pre>
+          </details>
+        </>
       )}
 
       {state === "error" && <p className="text-xs leading-snug text-[var(--danger)]">{error}</p>}

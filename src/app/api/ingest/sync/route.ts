@@ -13,7 +13,12 @@ import { brainDocumentPagePath } from "@/lib/brain/markdown";
 import { commitBrainRepo, syncBrain } from "@/lib/brain/gbrain-cli";
 import { linkRelatedDocuments } from "@/lib/brain/gbrain-remote";
 
-const DEFAULT_MAX_PER_SOURCE = 50;
+// Was 50 — raised alongside gmail.ts's Promotions/Social filter after a
+// live case (2026-08-18) where a real, important thread from the day
+// before fell outside the unfiltered top-50-across-all-mail window. The
+// filter alone reclaims most of the lost headroom; this is extra margin
+// on top of it, not a replacement for it.
+const DEFAULT_MAX_PER_SOURCE = 100;
 
 export async function POST() {
   // Ingestion shells out to a local gbrain binary + local brain/ git repo —
@@ -46,7 +51,7 @@ export async function POST() {
     const commit = await commitBrainRepo(
       `ingest: ${messages.length} gmail message(s), ${files.length} drive file(s), ${events.length} calendar event(s)`,
     );
-    const syncLog = await syncBrain();
+    const sync = await syncBrain();
 
     // Only worth relinking when something actually changed — most auto-syncs
     // (feature #3, fires on every page load) find nothing new, and linking
@@ -70,7 +75,8 @@ export async function POST() {
       pagesWritten: paths.length,
       committed: commit.committed,
       linksCreated: linking.linksCreated,
-      syncLog,
+      syncSkipped: sync.skipped,
+      syncLog: sync.log,
     });
   } catch (err) {
     console.error("Ingestion sync failed", err);

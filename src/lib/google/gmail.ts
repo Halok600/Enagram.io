@@ -158,8 +158,20 @@ export async function searchMessages(
   return messages.map(toGmailMessage);
 }
 
+/**
+ * Real gap found live (2026-08-18): with an unfiltered "" query, the top-N
+ * most-recent-across-all-mail window fills up with Promotions/Social noise
+ * (newsletters, LinkedIn notifications, etc.) on a busy inbox, silently
+ * pushing a genuinely important thread (e.g. an interview-scheduling email
+ * from the day before) out of the ingested window entirely — confirmed via
+ * a direct query showing the thread WAS reachable by Gmail's API, just not
+ * inside the unfiltered top-N. Excluding these two low-signal categories
+ * isn't a semantic narrowing of "recent Gmail" so much as removing mail
+ * that was never going to be a Tier 1/2 answer anyway, freeing real
+ * capacity in a capped window for what actually matters.
+ */
 export async function listRecentMessages(accessToken: string, maxResults = 25) {
-  return searchMessages(accessToken, "", maxResults);
+  return searchMessages(accessToken, "-category:promotions -category:social", maxResults);
 }
 
 function buildRawReplyMime({
