@@ -79,13 +79,26 @@ Verify it actually installed:
 !gbrain --version
 ```
 
-**4. Third cell — get the code:**
+**4. Third cell — get the code, and git-init `brain/` as its own standalone
+repo:**
 
 ```
 !git clone https://github.com/Halok600/Enagram.io.git
 %cd Enagram.io
 !bun install
+!git init brain
 ```
+
+The last line matters and is easy to skip: `brain/` is gitignored, so
+cloning the app repo does **not** bring it along or make it a repo of its
+own. Without this, `commitBrainRepo`'s `git add`/`commit` calls silently
+fall back to the *outer* app repo (git searches upward for `.git` when the
+cwd doesn't have one), and `gbrain sync` — which checks specifically for
+`local_path/.git`, not an inherited one — ends up trying to `git pull` the
+wrong repository entirely and fails. Confirmed live 2026-08-19: this exact
+gap produced `sync.discover_git_root` resolving to `/content/Enagram.io`
+instead of `/content/Enagram.io/brain`, then a failed pull against GitHub.
+`git init` here, before anything gets written, avoids it entirely.
 
 **5. Fourth cell — initialize gbrain's local config against the existing
 database**, explicitly locking in the same engine and embedding settings the
