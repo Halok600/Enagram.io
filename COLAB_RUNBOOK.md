@@ -19,11 +19,17 @@ Run in a Colab code cell (`!` prefix for shell commands):
 
 ```bash
 !curl -fsSL https://bun.sh/install | bash
-!source ~/.bashrc && bun install -g gbrain
+!source ~/.bashrc && ~/.bun/bin/bun add -g github:garrytan/gbrain --trust
 !git clone https://github.com/Halok600/Enagram.io.git
 %cd Enagram.io
 !~/.bun/bin/bun install
 ```
+
+(`--trust` matters: gbrain's install runs a postinstall script that fetches
+its platform binary — without `--trust`, bun blocks that script and the
+install silently produces a broken/missing binary. Confirmed against the
+original local install's `~/.bun/install/global/package.json`, which records
+the dependency as `github:garrytan/gbrain`, not the bare npm name `gbrain`.)
 
 Set env vars for the notebook process (Colab's "Secrets" panel — the key
 icon in the left sidebar — is safer than pasting these directly into a
