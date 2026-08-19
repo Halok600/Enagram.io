@@ -17,7 +17,11 @@ export function getTunnelConfig(): TunnelConfig | null {
   const url = process.env.INGEST_TUNNEL_URL;
   const secret = process.env.INGEST_TUNNEL_SECRET;
   if (!url || !secret) return null;
-  return { url, secret };
+  // A trailing slash (easy to paste by accident — browsers show bare origins
+  // that way) would otherwise become a double slash below (".../app//sync"),
+  // which ngrok's edge can reject with its own branded 404 before the
+  // request ever reaches the worker — confirmed live 2026-08-19.
+  return { url: url.replace(/\/+$/, ""), secret };
 }
 
 /** Single source of truth for the UI gate — replaces the raw !process.env.VERCEL check. */

@@ -8,89 +8,180 @@ See `src/lib/brain/ingest-tunnel.ts` and `scripts/ingest-worker.ts` for the
 code side of this; this doc is the operational checklist for the Colab side.
 
 **Before wiping the old PC**, copy its `GBRAIN_DIRECT_DATABASE_URL` value
-somewhere safe (it's a Windows user env var — `echo %GBRAIN_DIRECT_DATABASE_URL%`
-in cmd, or check `.env.local`/shell profile if it was set there too). The
-Colab worker needs this so it points at the *same* Supabase-backed brain
-(152 pages, already embedded) instead of initializing a fresh empty one.
+somewhere safe (it's a Windows user env var — `echo $env:GBRAIN_DIRECT_DATABASE_URL`
+in PowerShell, or check `.env.local` if it was set there too). The Colab
+worker needs this so it points at the *same* Supabase-backed brain (152
+pages, already embedded) instead of initializing a fresh empty one.
 
-## One-time setup, every time you spin up a fresh Colab runtime
+## Every fresh Colab runtime — realistically, every session
 
-Run in a Colab code cell (`!` prefix for shell commands):
+Colab's free tier wipes the entire VM on disconnect (~90 min idle, ~12h
+max), so in practice this whole section runs from scratch nearly every time
+you sit down to work, not just occasionally. Budget a few minutes for it.
 
-```bash
-!curl -fsSL https://bun.sh/install | bash
-!source ~/.bashrc && ~/.bun/bin/bun add -g github:garrytan/gbrain --trust
-!git clone https://github.com/Halok600/Enagram.io.git
-%cd Enagram.io
-!~/.bun/bin/bun install
-```
-
-(`--trust` matters: gbrain's install runs a postinstall script that fetches
-its platform binary — without `--trust`, bun blocks that script and the
-install silently produces a broken/missing binary. Confirmed against the
-original local install's `~/.bun/install/global/package.json`, which records
-the dependency as `github:garrytan/gbrain`, not the bare npm name `gbrain`.)
-
-Set env vars for the notebook process (Colab's "Secrets" panel — the key
-icon in the left sidebar — is safer than pasting these directly into a
-cell, since cell contents can end up in notebook history):
-
+**1. Add four Colab secrets** (key icon 🔑 in the left sidebar → "+ Add new
+secret," toggle Notebook access ON for each):
 - `GBRAIN_DIRECT_DATABASE_URL` — the value saved before the PC wipe.
-- `INGEST_TUNNEL_SECRET` — pick any random string once; use the *same* value
-  in Vercel's env vars. Doesn't need to change on restart, only the URL does.
+- `INGEST_TUNNEL_SECRET` — any random string, picked once; the *same* value
+  also goes into Vercel's env vars. Doesn't need to change on restart, only
+  `INGEST_TUNNEL_URL` does.
+- `NGROK_AUTHTOKEN` — from ngrok.com → Getting Started → Your Authtoken
+  (probably the same one already used for other projects on this account).
+- `GOOGLE_GENERATIVE_AI_API_KEY` — same value as `.env.local`'s line of the
+  same name. gbrain's embed step calls Google's embedding API directly; sync
+  fails without this.
 
-**Verify the existing `personal-brain` source will actually sync from this
-new path** before relying on it — this is the one step not yet proven
-end-to-end, since it needs a live Colab session to test:
-
-```bash
-!~/.bun/bin/gbrain sources status
-!~/.bun/bin/gbrain sources add personal-brain --path $(pwd)/brain
-```
-If `sources add` errors because the source already exists rather than
-updating its `local_path`, check `gbrain sources --help` for a rename/update
-form — don't guess past an error here, since getting this wrong risks a
-duplicate source or an orphaned sync target.
-
-## Starting the worker (every restart)
-
-```bash
-%cd Enagram.io
-!INGEST_TUNNEL_SECRET=$INGEST_TUNNEL_SECRET GBRAIN_DIRECT_DATABASE_URL=$GBRAIN_DIRECT_DATABASE_URL nohup ~/.bun/bin/bun run scripts/ingest-worker.ts > worker.log 2>&1 &
-!sleep 2 && cat worker.log
-```
-
-Then start ngrok (install once per fresh runtime the same way — `pip install
-pyngrok` is the easiest path from a Colab cell, or the standalone `ngrok`
-binary if you already have a preferred install pattern from your other
-projects):
+**2. First cell — load secrets and fix PATH, both at the Python/kernel
+level:**
 
 ```python
+import os
+from google.colab import userdata
+
+os.environ["GBRAIN_DIRECT_DATABASE_URL"] = userdata.get("GBRAIN_DIRECT_DATABASE_URL")
+os.environ["INGEST_TUNNEL_SECRET"] = userdata.get("INGEST_TUNNEL_SECRET")
+os.environ["NGROK_AUTHTOKEN"] = userdata.get("NGROK_AUTHTOKEN")
+os.environ["GOOGLE_GENERATIVE_AI_API_KEY"] = userdata.get("GOOGLE_GENERATIVE_AI_API_KEY")
+
+# Each `!` cell spawns a fresh subprocess, so a shell `source ~/.bashrc` in
+# one cell does NOT carry PATH forward to the next `!` cell — but changes to
+# os.environ made here, at the Python/kernel level, DO persist across every
+# subsequent cell for the rest of the session. Set this once, here, instead
+# of repeating `source ~/.bashrc` or a full ~/.bun/bin/ path on every command.
+os.environ["PATH"] = "/root/.bun/bin:" + os.environ["PATH"]
+
+print("secrets loaded")
+```
+
+Run it, allow Colab's permission prompt the first time. From here on, plain
+`bun` and `gbrain` (no path prefix) work in every `!` cell for the rest of
+this session.
+
+**3. Second cell — install bun and gbrain:**
+
+```
+!curl -fsSL https://bun.sh/install | bash
+!bun add -g github:garrytan/gbrain
+```
+
+No `--trust` flag. gbrain's actual postinstall script
+(`scripts/postinstall.ts` in the package) only tries to run `gbrain
+apply-migrations` on an *already-linked* binary, and no-ops cleanly if
+gbrain isn't on PATH yet — always true on a fresh install, so it's a no-op
+for us either way. It never fetches a binary itself; that happens through
+bun's normal global-install linking regardless of `--trust`. Passing
+`--trust` was observed to make this no-op step crash with exit 127 instead
+of skipping quietly — leaving it off avoids that failure with no functional
+loss.
+
+Verify it actually installed:
+```
+!gbrain --version
+```
+
+**4. Third cell — get the code:**
+
+```
+!git clone https://github.com/Halok600/Enagram.io.git
+%cd Enagram.io
+!bun install
+```
+
+**5. Fourth cell — initialize gbrain's local config against the existing
+database**, explicitly locking in the same engine and embedding settings the
+existing 152 pages were already embedded with (confirmed via `gbrain config
+show` on the original machine: `engine: postgres`, `embedding_model:
+google:gemini-embedding-001`, `embedding_dimensions: 768`) — letting `init`
+guess instead risks a silent mismatch that breaks search consistency:
+
+```
+!gbrain init --url "$GBRAIN_DIRECT_DATABASE_URL" --embedding-model google:gemini-embedding-001 --embedding-dimensions 768 --non-interactive
+```
+
+**6. Fifth cell — point the existing brain source at this new path:**
+
+```
+!gbrain sources status
+```
+
+This should show `personal-brain` with its existing page count. **Do NOT run
+`gbrain sources add personal-brain --path ...`** — proven live on
+2026-08-19: the source already exists every time after the first setup, and
+`sources add`'s "already registered" check fires unconditionally (even with
+`--force`), with its own suggested fix being `sources remove
+--confirm-destructive`. Checked `schema.sql` directly: `pages.source_id`
+has `REFERENCES sources(id) ON DELETE CASCADE` — that command would delete
+every page and embedding, not just re-point the path.
+
+The actual fix is a single-column SQL update, run from a Colab cell (it
+already has `GBRAIN_DIRECT_DATABASE_URL` loaded):
+
+```python
+import subprocess
+result = subprocess.run(
+    ["bun", "-e", """
+import { SQL } from "bun";
+const sql = new SQL(process.env.GBRAIN_DIRECT_DATABASE_URL);
+const r = await sql`UPDATE sources SET local_path = '/content/Enagram.io/brain' WHERE id = 'personal-brain' RETURNING id, local_path`;
+console.log(r);
+await sql.end();
+"""],
+    capture_output=True, text=True
+)
+print(result.stdout, result.stderr)
+```
+
+Adjust the path if your clone doesn't land at `/content/Enagram.io` — confirm
+with `!pwd` first. Re-run `gbrain sources status` afterward and confirm the
+page count is unchanged before moving on.
+
+**7. Sixth cell — start the worker:**
+
+```
+%cd /content/Enagram.io
+!nohup bun run scripts/ingest-worker.ts > worker.log 2>&1 &
+!sleep 2 && cat worker.log
+```
+Should print `Ingest worker listening on :8787`.
+
+**8. Seventh cell — start the ngrok tunnel:**
+
+```python
+!pip install pyngrok -q
 from pyngrok import ngrok
+ngrok.set_auth_token(os.environ["NGROK_AUTHTOKEN"])
 tunnel = ngrok.connect(8787)
 print(tunnel.public_url)
 ```
 
-## Every time you restart (the actual recurring workflow)
+Copy the printed `https://*.ngrok-free.app` URL — that goes into Vercel next.
 
-1. Re-run the "Starting the worker" cell above (setup only needs to happen
-   once per fresh Colab runtime, not every restart, as long as the runtime
-   itself didn't recycle).
-2. Copy the new `tunnel.public_url` printed above.
-3. In Vercel → Settings → Environment Variables, update `INGEST_TUNNEL_URL`
-   to that URL.
-4. **Trigger a redeploy** — editing a Vercel env var alone does not apply it
-   to the running deployment, a redeploy is required every time.
-5. Click "Sync now" on the deployed site and confirm it completes instead of
-   erroring "Sync worker unreachable."
+## Every time, in Vercel
+
+1. Vercel dashboard → this project → Settings → Environment Variables.
+2. First time only: add `INGEST_TUNNEL_SECRET` (same value as the Colab
+   secret above).
+3. Every time: set/update `INGEST_TUNNEL_URL` to the ngrok URL just copied.
+4. **Trigger a redeploy** — Deployments tab → "⋯" on the latest → Redeploy.
+   Editing an env var alone does not apply it; a redeploy is required every
+   single time the URL changes.
+5. Wait about a minute, then click "Sync now" on the deployed site and
+   confirm it completes instead of erroring "Sync worker unreachable."
+
+## Keeping it running
+
+As long as the Colab tab stays open and connected, the worker + tunnel keep
+running and nothing above needs repeating. The moment Colab disconnects
+(closing the tab, ~90 min idle, or the ~12h cap), the worker goes down and
+the whole notebook section needs to be re-run from the top — including
+reinstalling bun/gbrain and re-cloning, since the VM itself is gone, not
+just the process.
 
 ## Known limits
 
-- Colab free tier disconnects after ~90 min idle or ~12h max session, and
-  the browser tab generally needs to stay open. Ingestion is simply
-  unavailable outside an active Colab session — the UI surfaces this as a
-  clear "Sync worker unreachable" error rather than hanging or failing
-  silently (see `syncViaTunnel` in `ingest-tunnel.ts`).
+- Ingestion is simply unavailable outside an active Colab session — the UI
+  surfaces this as a clear "Sync worker unreachable" error rather than
+  hanging or failing silently (see `syncViaTunnel` in `ingest-tunnel.ts`).
 - Free ngrok gives a new random subdomain every session unless you claim a
   static domain (ngrok's free tier allows one permanently free) — worth
   doing if the manual URL-copy step becomes annoying, but not required.
